@@ -32,6 +32,12 @@ def metric_daily(name: str) -> Callable:
     return compose
 
 
+def gdn_placements(data: dict) -> str:
+    return f"""
+    <p>{data['cnt']} placement generated more than 50% of your GDN conversions</p>
+    """
+
+
 def potential_negative_search_terms(data: dict) -> str:
     lines = [
         f"<li>{i.query} - {i['clicks']} clicks - {i['conversions']} conversions</li>"

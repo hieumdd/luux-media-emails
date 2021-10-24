@@ -38,6 +38,11 @@ class CTR(Metric):
     query = staticmethod(getter.metric_daily("Ctr"))
     compose_body = staticmethod(composer.metric_daily("CTR"))
 
+class GDNPlacements(Metric):
+    name = "GDN Placements"
+    query = staticmethod(getter.gdn_placements(1))
+    compose_body = staticmethod(composer.gdn_placements)
+
 
 class PotentialNegativeSearchTerms(Metric):
     name = "Potential Negative Search Terms"

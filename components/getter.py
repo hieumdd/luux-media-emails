@@ -97,6 +97,32 @@ def underspent_campaigns(days: int) -> Callable:
     )
 
 
+def gdn_placements(days: int) -> Callable:
+    return (
+        lambda external_customer_id: f"""
+            WITH base AS (
+                SELECT p.DisplayName, SUM(pcs.Conversions) AS Conversions
+            FROM {DATASET}.PlacementConversionStats_{TABLE_SUFFIX} pcs
+            INNER JOIN {DATASET}.Placement_{TABLE_SUFFIX} p
+                ON pcs.CampaignId = p.CampaignId
+                AND pcs.AdGroupId = p.AdGroupId
+            -- WHERE pcs._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
+            -- AND p._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
+            AND pcs.ExternalCustomerId = {external_customer_id}
+            GROUP BY 1
+            ),
+            base2 AS (
+                SELECT 
+                    DisplayName, Conversions,
+                    (SELECT AVG(Conversions) FROM base) AS avg_conversions,
+            FROM base
+            )
+        SELECT COUNT(*) FROM base2
+        WHERE (Conversions - avg_conversions) / avg_conversions > 0.5
+    """
+    )
+
+
 def potential_negative_search_terms(days: int) -> Callable:
     return (
         lambda external_customer_id: f"""
