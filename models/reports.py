@@ -1,7 +1,7 @@
 import time
 from typing import Tuple
 
-from google.cloud.bigquery import Client
+from google.cloud.bigquery import Client, LoadJob
 from models import Daily
 
 
@@ -15,7 +15,7 @@ def reports(client: Client, external_customer_id: str, mode="Daily") -> Tuple[st
             Daily.Conversions,
             Daily.CTR,
             Daily.PotentialNegativeSearchTerms,
-            Daily.DisapprovedAds,
+            # Daily.DisapprovedAds,
         ]
         if mode == "Daily"
         else [
@@ -26,8 +26,8 @@ def reports(client: Client, external_customer_id: str, mode="Daily") -> Tuple[st
         ]
     )
 
-    def report():
-        def poll(jobs):
+    def report() -> Tuple[str, str]:
+        def poll(jobs: LoadJob):
             undone_jobs = [job for job in jobs if job.state != "DONE"]
             if undone_jobs:
                 time.sleep(5)
@@ -44,29 +44,3 @@ def reports(client: Client, external_customer_id: str, mode="Daily") -> Tuple[st
         )
 
     return report
-
-
-# def report_daily(client, external_customer_id):
-#     return functools.partial(
-#         report,
-#         client=client,
-#         external_customer_id=external_customer_id,
-#         metrics=[
-#             Daily.UnderspentCampaigns,
-#             Daily.Clicks,
-#             Daily.Impressions,
-#             Daily.Conversions,
-#             Daily.CTR,
-#             Daily.PotentialNegativeSearchTerms,
-#             Daily.DisapprovedAds,
-#         ],
-#     )
-
-
-# def report_weekly(client):
-#     return functools.partial(report, client=client, metrics=[
-
-#     ])
-
-# x = report_daily(bigquery.Client())
-# x
