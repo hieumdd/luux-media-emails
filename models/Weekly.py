@@ -1,57 +1,75 @@
-from models.models import Metric
-from components.query import metric_daily
+from models.metrics import Metric
+from components import getter
+from components import composer
 
-def metric_weekly(table, field):
-    return f"""
-        WITH base AS (
-            SELECT Date, SUM({field}) AS d0,
-            FROM {table}
-            WHERE _DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -31 DAY)
-            GROUP BY 1
-        ),
-        base2 AS (
-            SELECT Date, d0,
-                LEAD(d0, 7) OVER (ORDER BY Date DESC) AS d7,
-                LEAD(d0, 30) OVER (ORDER BY Date DESC) AS d30
-            FROM base
-            ORDER BY 1 DESC LIMIT 7
-        )
-        SELECT
-            MAX(Date) AS Date,
-            SUM(d0) AS d0,
-            SUM(d7) AS d7,
-            SUM(d30) AS d30
-        FROM base2
-        """
+
+class UnderspentAccounts(Metric):
+    name = "Budget Account"
+    query = staticmethod(getter.underspent_account(7))
+    compose_body = staticmethod(composer.underspent_account)
+
+
+class UnderspentCampaigns(Metric):
+    name = "Budget Campaigns"
+    query = staticmethod(getter.underspent_campaigns(7))
+    compose_body = staticmethod(composer.underspent_campaigns)
+
 
 class Clicks(Metric):
-    query = lambda self: metric_weekly(self.table, "Clicks")
+    name = "Clicks"
+    query = staticmethod(getter.metric_weekly("Clicks"))
+    compose_body = staticmethod(composer.metric_weekly("Clicks"))
 
 
 class Impressions(Metric):
-    query = lambda self: metric_weekly(self.table, "Impressions")
+    name = "Impressions"
+    query = staticmethod(getter.metric_weekly("Impressions"))
+    compose_body = staticmethod(composer.metric_weekly("Impressions"))
 
 
 class Conversions(Metric):
-    query = lambda self: metric_weekly(self.table, "Conversions")
+    name = "Conversions"
+    query = staticmethod(getter.metric_weekly("Conversions"))
+    compose_body = staticmethod(composer.metric_weekly("Conversions"))
 
 
 class CTR(Metric):
-    query = lambda self: metric_weekly(self.table, "Ctr")
+    name = "CTR"
+    query = staticmethod(getter.metric_weekly("Ctr"))
+    compose_body = staticmethod(composer.metric_weekly("CTR"))
 
 
-class DailyPotentialNegativeSearchTerms(Metric):
-    query = (
-        lambda self: f"""
-            SELECT
-                ARRAY_AGG(DISTINCT Query) AS values,
-            FROM
-                {self.table}
-            WHERE
-                _DATA_DATE = DATE_ADD(CURRENT_DATE(), INTERVAL -1 DAY)
-                AND (
-                    Clicks > 50
-                    AND Conversions = 0
-                )
-            """
-    )
+class CPC(Metric):
+    name = "CPC"
+    query = staticmethod(getter.metric_weekly("AverageCpc"))
+    compose_body = staticmethod(composer.metric_weekly("CPC"))
+
+
+class SIS(Metric):
+    name = "SIS"
+    query = staticmethod(getter.metric_sis())
+    compose_body = staticmethod(composer.metric_weekly("SIS"))
+
+
+class TOPSIS(Metric):
+    name = "TOPSIS"
+    query = staticmethod(getter.metric_topsis())
+    compose_body = staticmethod(composer.metric_weekly("TOPSIS"))
+
+
+class GDNPlacements(Metric):
+    name = "GDN Placements"
+    query = staticmethod(getter.gdn_placements(7))
+    compose_body = staticmethod(composer.gdn_placements)
+
+
+class PotentialNegativeSearchTerms(Metric):
+    name = "Potential Negative Search Terms"
+    query = staticmethod(getter.potential_negative_search_terms(7))
+    compose_body = staticmethod(composer.potential_negative_search_terms)
+
+
+class DisapprovedAds(Metric):
+    name = "Disapproved Ads"
+    query = staticmethod(getter.disapproved_ads(7))
+    compose_body = staticmethod(composer.disapproved_ads)

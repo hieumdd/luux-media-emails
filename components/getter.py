@@ -3,6 +3,65 @@ from typing import Callable
 from config import DATASET, TABLE_SUFFIX
 
 
+def metric_daily(field: str) -> Callable:
+    return (
+        lambda external_customer_id: f"""
+            WITH base AS (
+                SELECT Date, SUM({field}) AS d0
+                FROM {DATASET}.AccountStats_{TABLE_SUFFIX}
+                WHERE
+                    _DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -8 DAY)
+                    AND ExternalCustomerId = {external_customer_id}
+            GROUP BY 1
+            ),
+            base2 AS (
+                SELECT
+                    Date, d0,
+                    LEAD(d0) OVER (ORDER BY Date DESC) AS d1,
+                    (SELECT AVG(d0) FROM base) AS d7_avg
+                FROM base
+            ),
+            base3 AS (
+            SELECT
+                SAFE_DIVIDE(d0-d1,d1) as d1,
+                SAFE_DIVIDE(d0-d7_avg,d7_avg) as d7_avg
+            FROM base2
+            WHERE Date = DATE_ADD(CURRENT_DATE(), INTERVAL -1 DAY)
+            )
+            SELECT * FROM base3
+            """
+    )
+
+
+def metric_weekly(field: str) -> Callable:
+    return (
+        lambda external_customer_id: f"""
+        WITH base AS (
+            SELECT _DATA_DATE AS Date, SUM({field}) AS d0,
+            FROM {DATASET}.AccountStats_{TABLE_SUFFIX}
+            WHERE ExternalCustomerId = {external_customer_id}
+            GROUP BY 1 
+        ),
+        base2 AS (
+            SELECT
+                Date,
+                d0,
+                LEAD(d0, 7) OVER (ORDER BY Date DESC) AS d7,
+                LEAD(d0, 30) OVER (ORDER BY Date DESC) AS d30
+            FROM base
+        ),
+        base3 AS (
+            SELECT
+                SAFE_DIVIDE(SUM(d0)-SUM(d7),SUM(d7)) as d7,
+                SAFE_DIVIDE(SUM(d0)-SUM(d30),SUM(d30)) as d30,
+            FROM base2
+            WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)
+        )
+        SELECT * FROM base3
+    """
+    )
+
+
 def underspent_account(days: int) -> Callable:
     return (
         lambda external_customer_id: f"""
@@ -26,38 +85,6 @@ def underspent_account(days: int) -> Callable:
                 (Cost - Amount) / Amount AS percentage
             FROM base
         """
-    )
-
-
-def metric_daily(field: str) -> Callable:
-    return (
-        lambda external_customer_id: f"""
-            WITH base AS (
-                SELECT Date, SUM({field}) AS d0
-                FROM {DATASET}.AccountStats_{TABLE_SUFFIX}
-                WHERE
-                    _DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -8 DAY)
-                    AND ExternalCustomerId = {external_customer_id}
-            GROUP BY 1
-            ),
-            base2 AS (
-                SELECT
-                    Date, d0,
-                    LEAD(d0) OVER (ORDER BY Date DESC) AS d1,
-                    (SELECT AVG(d0) FROM base) AS d7_avg
-                FROM base
-            )
-            SELECT
-                SAFE_DIVIDE(d0-d1,d1) as d1,
-                SAFE_DIVIDE(d0-d7_avg,d7_avg) as d7_avg
-            FROM base2
-            WHERE
-                Date = DATE_ADD(CURRENT_DATE(), INTERVAL -1 DAY)
-                -- AND (
-                --     SAFE_DIVIDE(d0-d1,d1) < 0
-                --     OR SAFE_DIVIDE(d0-d7_avg,d7_avg) < 0
-                -- )
-            """
     )
 
 
@@ -164,25 +191,63 @@ def disapproved_ads(days: int) -> Callable:
     )
 
 
-def metric_weekly(table, field):
-    return f"""
-        WITH base AS (
-            SELECT Date, SUM({field}) AS d0,
-            FROM {table}
-            WHERE _DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -31 DAY)
-            GROUP BY 1
-        ),
-        base2 AS (
-            SELECT Date, d0,
-                LEAD(d0, 7) OVER (ORDER BY Date DESC) AS d7,
-                LEAD(d0, 30) OVER (ORDER BY Date DESC) AS d30
-            FROM base
-            ORDER BY 1 DESC LIMIT 7
-        )
-        SELECT
-            MAX(Date) AS Date,
-            SUM(d0) AS d0,
-            SUM(d7) AS d7,
-            SUM(d30) AS d30
-        FROM base2
+def metric_sis() -> Callable:
+    return (
+        lambda external_customer_id: f"""
+            WITH base AS (
+                SELECT
+                    _DATA_DATE AS Date,
+                    AVG(SAFE_CAST(REPLACE(SearchImpressionShare, '%', '') AS NUMERIC)) AS SearchImpressionShare
+                FROM {DATASET}.AccountNonClickStats_{TABLE_SUFFIX}
+                WHERE ExternalCustomerId = {external_customer_id}
+                GROUP BY 1
+            ),
+            base2 AS (
+                SELECT
+                    Date, 
+                    SearchImpressionShare AS d0,
+                    LEAD(SearchImpressionShare, 7) OVER (ORDER BY Date DESC) AS d7,
+                    LEAD(SearchImpressionShare, 30) OVER (ORDER BY Date DESC) AS d30,
+                FROM base
+            ),
+            base3 AS (
+                SELECT
+                    SAFE_DIVIDE(SUM(d0)-SUM(d7),SUM(d7)) as d7,
+                    SAFE_DIVIDE(SUM(d0)-SUM(d30),SUM(d30)) as d30,
+                FROM base2
+                WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)
+                )
+            SELECT * FROM base3
     """
+    )
+
+
+def metric_topsis() -> Callable:
+    return (
+        lambda external_customer_id: f"""
+            WITH base AS (
+                SELECT
+                    _DATA_DATE AS Date,
+                    AVG(SAFE_CAST(REPLACE(SearchTopImpressionShare, '%', '') AS NUMERIC)) AS SearchTopImpressionShare
+                FROM {DATASET}.CampaignCrossDeviceStats_{TABLE_SUFFIX}
+                WHERE ExternalCustomerId = {external_customer_id}
+                GROUP BY 1
+            ),
+            base2 AS (
+                SELECT
+                    Date, 
+                    SearchTopImpressionShare AS d0,
+                    LEAD(SearchTopImpressionShare, 7) OVER (ORDER BY Date DESC) AS d7,
+                    LEAD(SearchTopImpressionShare, 30) OVER (ORDER BY Date DESC) AS d30,
+                FROM base
+            ),
+            base3 AS (
+                SELECT
+                    SAFE_DIVIDE(SUM(d0)-SUM(d7),SUM(d7)) as d7,
+                    SAFE_DIVIDE(SUM(d0)-SUM(d30),SUM(d30)) as d30,
+                FROM base2
+                WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)
+                )
+            SELECT * FROM base3
+    """
+    )

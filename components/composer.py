@@ -1,13 +1,37 @@
 from typing import Callable, Union
 
 
+def format_scalar(number: Union[float, int]) -> str:
+    return f"{number:,}"
+
+
 def format_percentage(number: Union[float, int]) -> str:
-    return "{:.2%}".format(number)
+    return f"{number:.2%}"
+
+
+def metric_daily(name: str) -> Callable:
+    def compose(data: dict) -> str:
+        return f"""
+        <p>{name} were {format_percentage(data["d1"])} compared to the previous day</p>
+        <p>{name} were {format_percentage(data["d7_avg"])} compared to the previous 7 day average</p>
+        """
+
+    return compose
+
+
+def metric_weekly(name: str) -> Callable:
+    def compose(data: dict) -> str:
+        return f"""
+        <p>{name} were {format_percentage(data["d7"])} compared to the previous week</p>
+        <p>{name} were {format_percentage(data["d30"])} compared to viewing MOM performance</p>
+        """
+
+    return compose
 
 
 def underspent_account(data: dict) -> str:
     return f"""
-    <p>The account underspent by {format_percentage(data['percentage'])} ({data['underspent']})
+    <p>The account underspent by {format_percentage(data['percentage'])} ({format_scalar(data['underspent'])})
     """
 
 
@@ -22,16 +46,6 @@ def underspent_campaigns(data: dict) -> str:
     """
 
 
-def metric_daily(name: str) -> Callable:
-    def compose(data: dict) -> str:
-        return f"""
-        <p>{name} were {format_percentage(data["d1"])} less than the previous day</p>
-        <p>{name} were {format_percentage(data["d7_avg"])} less than the previous 7 day average</p>
-        """
-
-    return compose
-
-
 def gdn_placements(data: dict) -> str:
     return f"""
     <p>{data['cnt']} placement generated more than 50% of your GDN conversions</p>
@@ -40,7 +54,7 @@ def gdn_placements(data: dict) -> str:
 
 def potential_negative_search_terms(data: dict) -> str:
     lines = [
-        f"<li>{i.query} - {i['clicks']} clicks - {i['conversions']} conversions</li>"
+        f"<li>{i['query']} - {i['clicks']} clicks - {i['conversions']} conversions</li>"
         for i in data["search_terms"]
     ]
     return f"""

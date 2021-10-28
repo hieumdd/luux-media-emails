@@ -2,7 +2,7 @@ import time
 from typing import Tuple
 
 from google.cloud.bigquery import Client, LoadJob
-from models import Daily
+from models import Daily, Weekly
 
 
 def reports(client: Client, external_customer_id: str, mode="Daily") -> Tuple[str, str]:
@@ -19,10 +19,17 @@ def reports(client: Client, external_customer_id: str, mode="Daily") -> Tuple[st
         ]
         if mode == "Daily"
         else [
-            # Weekly.Clicks,
-            # Weekly.Impressions,
-            # Weekly.Conversions,
-            # Weekly.CTR,
+            Weekly.UnderspentAccounts,
+            Weekly.UnderspentCampaigns,
+            Weekly.Clicks,
+            Weekly.Impressions,
+            Weekly.Conversions,
+            Weekly.CTR,
+            Weekly.CPC,
+            Weekly.SIS,
+            Weekly.TOPSIS,
+            Weekly.PotentialNegativeSearchTerms,
+            # Daily.DisapprovedAds,
         ]
     )
 
