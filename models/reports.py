@@ -45,7 +45,7 @@ def reports(client: Client, external_customer_id: str, mode="Daily") -> Tuple[st
                 return poll(jobs)
 
         subject = f"Potential Issues With {external_customer_id} on Google"
-        prelude = f"<p>Please see the below potential issues when carrying out daily checks for {external_customer_id}</p>"
+        prelude = f"<p>Please see the below potential issues when carrying out {mode.lower()} checks for {external_customer_id}</p>"
         _metrics = [i() for i in metrics]
         jobs = [i.get(client, external_customer_id) for i in _metrics]
         poll(jobs)
