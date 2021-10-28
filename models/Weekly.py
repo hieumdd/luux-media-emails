@@ -75,6 +75,18 @@ class DisapprovedAds(Metric):
     compose_body = staticmethod(composer.disapproved_ads)
 
 
+class CampaignPerformance(Metric):
+    name = "Campaign Performance"
+    query = staticmethod(getter.metric_performance("CampaignName"))
+    compose_body = staticmethod(composer.metric_performance("Campaigns"))
+
+
+class AdGroupPerformance(Metric):
+    name = "Ad Group Performance"
+    query = staticmethod(getter.metric_performance("AdGroupName"))
+    compose_body = staticmethod(composer.metric_performance("Ad Groups"))
+
+
 class AdGroupCPA(Metric):
     name = "Ad Group CPA Alerts"
     query = staticmethod(getter.metric_cpa("AdGroupName"))

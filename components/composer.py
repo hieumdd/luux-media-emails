@@ -80,3 +80,17 @@ def metric_cpa(field: str) -> Callable:
         """
 
     return compose
+
+
+def metric_performance(field: str) -> Callable:
+    def compose(data: dict) -> str:
+        week_lines = [f"<li>{i['key']}</li>" for i in data["value"] if i['d7'] < 0]
+        month_lines = [f"<li>{i['key']}</li>" for i in data["value"] if i['d30'] < 0]
+        return f"""
+        <p>Performance on the following {field} has reduced WOW:</p>
+        <ul>{''.join(week_lines)}</ul>
+        <p>Performance on the following {field} has reduced MOM:</p>
+        <ul>{''.join(month_lines)}</ul>
+        """
+
+    return compose
