@@ -138,3 +138,4 @@ dmypy.json
 cython_debug/
 voltaic-country-280607-ea3eb5348029.json
 test.html
+.vscode
