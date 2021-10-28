@@ -31,7 +31,6 @@ def send_email(receivers: list[str], subject: str, report: str) -> list[str]:
     ) as server:
         server.login(SENDER, os.getenv("SENDER_PWD"))
         for receiver in receivers:
-            receiver
             server.sendmail(
                 SENDER,
                 receiver,

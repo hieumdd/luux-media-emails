@@ -13,7 +13,7 @@ MODE = [
 ]
 
 
-def run(data):
+def run(data: dict) -> dict:
     req = Mock(get_json=Mock(return_value=data), args=data)
     res = main(req)
     return res
@@ -27,7 +27,7 @@ def run(data):
     "mode",
     MODE,
 )
-def test_emails(account, mode):
+def test_emails(account: str, mode: str):
     res = run(
         {
             "external_customer_id": account,

@@ -9,7 +9,7 @@ def format_percentage(number: Union[float, int]) -> str:
     return f"{number:.2%}"
 
 
-def metric_daily(name: str) -> Callable:
+def metric_daily(name: str) -> Callable[[str], str]:
     def compose(data: dict) -> str:
         return f"""
         <p>{name} were {format_percentage(data["d1"])} compared to the previous day</p>
@@ -19,7 +19,7 @@ def metric_daily(name: str) -> Callable:
     return compose
 
 
-def metric_weekly(name: str) -> Callable:
+def metric_weekly(name: str) -> Callable[[str], str]:
     def compose(data: dict) -> str:
         return f"""
         <p>{name} were {format_percentage(data["d7"])} compared to the previous week</p>
@@ -71,7 +71,7 @@ def disapproved_ads(data: dict) -> str:
     """
 
 
-def metric_cpa(field: str) -> Callable:
+def metric_cpa(field: str) -> Callable[[str], str]:
     def compose(data: dict) -> str:
         lines = [f"<li>{i}</li>" for i in data["values"]]
         return f"""
@@ -82,7 +82,7 @@ def metric_cpa(field: str) -> Callable:
     return compose
 
 
-def metric_performance(field: str) -> Callable:
+def metric_performance(field: str) -> Callable[[str], str]:
     def compose(data: dict) -> str:
         week_lines = [f"<li>{i['key']}</li>" for i in data["value"] if i['d7'] < 0]
         month_lines = [f"<li>{i['key']}</li>" for i in data["value"] if i['d30'] < 0]

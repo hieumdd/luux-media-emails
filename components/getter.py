@@ -1,9 +1,10 @@
 from typing import Callable
 
-from config import DATASET, TABLE_SUFFIX
+DATASET = "GoogleAds"
+TABLE_SUFFIX = "7248313550"
 
 
-def metric_daily(field: str) -> Callable:
+def metric_daily(field: str) -> Callable[[str], str]:
     return (
         lambda external_customer_id: f"""
             WITH base AS (
@@ -33,7 +34,7 @@ def metric_daily(field: str) -> Callable:
     )
 
 
-def metric_weekly(field: str) -> Callable:
+def metric_weekly(field: str) -> Callable[[str], str]:
     return (
         lambda external_customer_id: f"""
         WITH base AS (
@@ -62,7 +63,7 @@ def metric_weekly(field: str) -> Callable:
     )
 
 
-def underspent_account(days: int) -> Callable:
+def underspent_account(days: int) -> Callable[[str], str]:
     return (
         lambda external_customer_id: f"""
             WITH base AS (
@@ -88,7 +89,7 @@ def underspent_account(days: int) -> Callable:
     )
 
 
-def underspent_campaigns(days: int) -> Callable:
+def underspent_campaigns(days: int) -> Callable[[str], str]:
     return (
         lambda external_customer_id: f"""
             WITH base AS (
@@ -124,7 +125,7 @@ def underspent_campaigns(days: int) -> Callable:
     )
 
 
-def gdn_placements(days: int) -> Callable:
+def gdn_placements(days: int) -> Callable[[str], str]:
     return (
         lambda external_customer_id: f"""
             WITH base AS (
@@ -150,7 +151,7 @@ def gdn_placements(days: int) -> Callable:
     )
 
 
-def potential_negative_search_terms(days: int) -> Callable:
+def potential_negative_search_terms(days: int) -> Callable[[str], str]:
     return (
         lambda external_customer_id: f"""
             WITH base AS (
@@ -175,7 +176,7 @@ def potential_negative_search_terms(days: int) -> Callable:
     )
 
 
-def disapproved_ads(days: int) -> Callable:
+def disapproved_ads(days: int) -> Callable[[str], str]:
     return (
         lambda external_customer_id: f"""
             WITH base AS (
@@ -191,7 +192,7 @@ def disapproved_ads(days: int) -> Callable:
     )
 
 
-def metric_sis() -> Callable:
+def metric_sis() -> Callable[[str], str]:
     return (
         lambda external_customer_id: f"""
             WITH base AS (
@@ -222,7 +223,7 @@ def metric_sis() -> Callable:
     )
 
 
-def metric_topsis() -> Callable:
+def metric_topsis() -> Callable[[str], str]:
     return (
         lambda external_customer_id: f"""
             WITH base AS (
@@ -253,7 +254,7 @@ def metric_topsis() -> Callable:
     )
 
 
-def metric_cpa(field: str) -> Callable:
+def metric_cpa(field: str) -> Callable[[str], str]:
     return (
         lambda external_customer_id: f"""
             WITH base AS (
@@ -298,7 +299,7 @@ def metric_cpa(field: str) -> Callable:
     )
 
 
-def metric_performance(field: str) -> Callable:
+def metric_performance(field: str) -> Callable[[str], str]:
     return (
         lambda external_customer_id: f"""
             WITH base AS (
