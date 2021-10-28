@@ -1,7 +1,6 @@
 from typing import Callable
 
-DATASET = "GoogleAds"
-TABLE_SUFFIX = "7248313550"
+from config import DATASET, TABLE_SUFFIX
 
 
 def metric_daily(field: str) -> Callable[[str], str]:

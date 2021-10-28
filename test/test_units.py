@@ -35,3 +35,16 @@ def test_emails(account: str, mode: str):
         }
     )
     assert res["emails_sent"] > 0
+
+
+@pytest.mark.parametrize(
+    "mode",
+    MODE,
+)
+def test_tasks(mode: str):
+    res = run(
+        {
+            "tasks": mode,
+        }
+    )
+    assert res["messages_sent"] > 0
