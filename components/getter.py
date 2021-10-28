@@ -251,3 +251,48 @@ def metric_topsis() -> Callable:
             SELECT * FROM base3
     """
     )
+
+
+def metric_cpa(field: str) -> Callable:
+    return (
+        lambda external_customer_id: f"""
+            WITH base AS (
+                SELECT
+                    kbs.AdGroupId,
+                    ag.AdGroupName,
+                    kbs.CriterionId,
+                    k.Criteria,
+                    SUM(kbs.Cost) / 1000 AS Cost,
+                    SUM(kbs.Conversions) AS Conversions,
+                FROM {DATASET}.KeywordBasicStats_{TABLE_SUFFIX} kbs
+                INNER JOIN {DATASET}.Keyword_{TABLE_SUFFIX} k
+                    ON kbs.CampaignId = k.CampaignId
+                    AND kbs.AdGroupId = k.AdGroupId
+                    AND kbs.CriterionId = k.CriterionId
+                    AND kbs._DATA_DATE = k._DATA_DATE
+                INNER JOIN {DATASET}.AdGroup_{TABLE_SUFFIX} ag
+                    ON kbs.AdGroupId = ag.AdGroupId
+                    AND kbs._DATA_DATE = ag._DATA_DATE
+                WHERE kbs._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)
+                AND kbs.ExternalCustomerId = {external_customer_id}
+                GROUP BY 1, 2, 3, 4
+            ),
+            base2 AS (
+                SELECT
+                    {field},
+                    SAFE_DIVIDE(SUM(Cost),SUM(Conversions)) AS cpa,
+                FROM base
+                GROUP BY 1
+            ),
+            base3 AS (
+                SELECT
+                    {field},
+                    cpa,
+                    (SELECT AVG(CPA) FROM base2) AS cpa_avg
+                FROM base2
+            )
+            SELECT ARRAY_AGG({field}) AS values
+            FROM base3
+            WHERE (cpa - cpa_avg) > 0.5 * cpa_avg
+        """
+    )

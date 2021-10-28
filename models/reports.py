@@ -29,6 +29,8 @@ def reports(client: Client, external_customer_id: str, mode="Daily") -> Tuple[st
             Weekly.SIS,
             Weekly.TOPSIS,
             Weekly.PotentialNegativeSearchTerms,
+            Weekly.AdGroupCPA,
+            Weekly.KeywordCPA,
             # Daily.DisapprovedAds,
         ]
     )

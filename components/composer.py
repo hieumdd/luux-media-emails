@@ -71,8 +71,12 @@ def disapproved_ads(data: dict) -> str:
     """
 
 
-def compose_metric_weekly(name, data):
-    return f"""
-    <p>{name} were {data["d7"]} less than the previous week</p>
-    <p>{name} were {data["d30"]} less when viewing MOM performance
-    """
+def metric_cpa(field: str) -> Callable:
+    def compose(data: dict) -> str:
+        lines = [f"<li>{i}</li>" for i in data["values"]]
+        return f"""
+        <p>The following {field} have a CPA that is 50% or more higher than the account average:</p>
+        <ul>{''.join(lines)}</ul>
+        """
+
+    return compose
