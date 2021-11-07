@@ -6,6 +6,7 @@ from tasks import tasks
 
 RECEIVERS = [
     "hieumdd@gmail.com",
+    "jhamb285@gmail.com",
 ]
 
 BQ_CLIENT = bigquery.Client()
