@@ -1,9 +1,10 @@
 from google.cloud import bigquery
 
 from controllers.reports import report_factory, build_report
-from components.emails import send_email
+from controllers.emails import send_email
 from tasks import tasks
 
+SENDER = "siddhantmehandru.developer@gmail.com"
 RECEIVERS = [
     "hieumdd@gmail.com",
     "jhamb285@gmail.com",
@@ -27,7 +28,14 @@ def main(request) -> dict:
             report_factory(request_json["mode"]),
         )
         response = {
-            "emails_sent": len(send_email(RECEIVERS, subject, report)),
+            "emails_sent": len(
+                send_email(
+                    SENDER,
+                    RECEIVERS,
+                    subject,
+                    report,
+                )
+            ),
         }
     elif "tasks" in request_json:
         response = tasks(BQ_CLIENT, request_json)

@@ -2,30 +2,37 @@ import os
 import json
 import uuid
 
-from google.cloud import tasks_v2, bigquery
-
-from config import DATASET, TABLE_SUFFIX
-
+from google.cloud.bigquery import Client
+from google.cloud import tasks_v2
 
 TASKS_CLIENT = tasks_v2.CloudTasksClient()
-CLOUD_TASKS_PATH = (
-    os.getenv("PROJECT_ID"),
-    "us-central1",
-    "luux_media_emails",
-)
-PARENT = TASKS_CLIENT.queue_path(*CLOUD_TASKS_PATH)
 
 
-def get_customers(client: bigquery.Client) -> list[str]:
+def get_customers(
+    client: Client,
+    dataset: str,
+    table_suffix: str,
+) -> list[str]:
     results = client.query(
-        f"SELECT DISTINCT ExternalCustomerId FROM {DATASET}.AccountStats_{TABLE_SUFFIX}"
+        f"SELECT DISTINCT ExternalCustomerId FROM {dataset}.AccountStats_{table_suffix}"
     ).result()
     rows = [dict(row.items()) for row in results]
     return [str(i["ExternalCustomerId"]) for i in rows]
 
 
-def tasks(client: bigquery.Client, tasks_data: dict) -> dict:
-    accounts = get_customers(client)
+def tasks(
+    client: Client,
+    dataset: str,
+    table_suffix: str,
+    tasks_data: dict,
+) -> dict:
+    cloud_tasks_path = (
+        os.getenv("PROJECT_ID", ""),
+        "us-central1",
+        "luux_media_emails",
+    )
+    parent = TASKS_CLIENT.queue_path(*cloud_tasks_path)
+    accounts = get_customers(client, dataset, table_suffix)
     payloads = [
         {
             "name": f"{account}-{uuid.uuid4()}",
@@ -38,7 +45,9 @@ def tasks(client: bigquery.Client, tasks_data: dict) -> dict:
     ]
     tasks = [
         {
-            "name": TASKS_CLIENT.task_path(*CLOUD_TASKS_PATH, task=payload["name"]),
+            "name": TASKS_CLIENT.task_path(
+                *cloud_tasks_path, task=str(payload["name"])
+            ),
             "http_request": {
                 "http_method": tasks_v2.HttpMethod.POST,
                 "url": os.getenv("PUBLIC_URL"),
@@ -56,7 +65,7 @@ def tasks(client: bigquery.Client, tasks_data: dict) -> dict:
     responses = [
         TASKS_CLIENT.create_task(
             request={
-                "parent": PARENT,
+                "parent": parent,
                 "task": task,
             }
         )
