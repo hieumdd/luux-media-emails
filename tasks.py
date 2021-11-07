@@ -2,14 +2,13 @@ import os
 import json
 import uuid
 
-from google.cloud.bigquery import Client
-from google.cloud import tasks_v2
+from google.cloud import tasks_v2, bigquery # type: ignore
 
 TASKS_CLIENT = tasks_v2.CloudTasksClient()
 
 
 def get_customers(
-    client: Client,
+    client: bigquery.Client,
     dataset: str,
     table_suffix: str,
 ) -> list[str]:
@@ -21,7 +20,7 @@ def get_customers(
 
 
 def tasks(
-    client: Client,
+    client: bigquery.Client,
     dataset: str,
     table_suffix: str,
     tasks_data: dict,
