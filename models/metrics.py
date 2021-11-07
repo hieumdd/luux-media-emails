@@ -16,7 +16,7 @@ class Metric(metaclass=ABCMeta):
 
     @staticmethod
     @abstractmethod
-    def compose(data: dict) -> str:
+    def compose_body(data: dict) -> str:
         pass
 
     def get(self, client: Client, external_customer_id: str) -> LoadJob:
