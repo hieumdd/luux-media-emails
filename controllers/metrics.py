@@ -4,7 +4,6 @@ from models.metrics import IMetric
 def get(client, dataset, table_suffix, external_customer_id, metric: IMetric) -> str:
     query = metric["query"](dataset, table_suffix, external_customer_id)
     job = client.query(query)
-    # job.add_done_callback(lambda job: job)
     return job
 
 
