@@ -1,39 +1,85 @@
 import time
-from typing import Tuple
+from typing import TypedDict, Tuple, Callable
 
 from google.cloud.bigquery import Client, LoadJob
-from models import Daily, Weekly
+from models import daily, weekly
+from models.metrics import IMetric
 
 
-def reports(client: Client, external_customer_id: str, mode="Daily") -> Tuple[str, str]:
+class IReport(TypedDict):
+    mode: str
+    metrics: list[IMetric]
+
+
+report_daily: IReport = {
+    "mode": "Daily",
+    "metrics": [
+        daily.underspent_accounts,
+        daily.underspent_campaigns,
+        daily.clicks,
+        daily.impressions,
+        daily.conversions,
+        daily.ctr,
+        daily.potential_negative_search_terms,
+        # daily.disapproved_ads,
+    ],
+}
+
+report_weekly: IReport = {
+    "mode": "Weekly",
+    "metrics": [
+        weekly.underspent_accounts,
+        weekly.underspent_campaigns,
+        weekly.clicks,
+        weekly.impressions,
+        weekly.conversions,
+        weekly.ctr,
+        weekly.cpc,
+        weekly.sis,
+        weekly.topsis,
+        weekly.potential_negative_search_terms,
+        weekly.campaign_performance,
+        weekly.ad_group_performance,
+        weekly.ad_group_cpa,
+        weekly.keyword_cpa,
+        # weekly.disapproved_ads,
+    ],
+}
+
+
+def reports(
+    client: Client,
+    external_customer_id: str,
+    mode: str = "Daily",
+) -> Callable[[], Tuple[str, str]]:
     metrics = (
         [
-            Daily.UnderspentAccounts,
-            Daily.UnderspentCampaigns,
-            Daily.Clicks,
-            Daily.Impressions,
-            Daily.Conversions,
-            Daily.CTR,
-            Daily.PotentialNegativeSearchTerms,
-            # Daily.DisapprovedAds,
+            daily.underspent_accounts,
+            daily.underspent_campaigns,
+            daily.clicks,
+            daily.impressions,
+            daily.conversions,
+            daily.ctr,
+            daily.potential_negative_search_terms,
+            # daily.disapproved_ads,
         ]
-        if mode == "Daily"
+        if mode == "daily"
         else [
-            Weekly.UnderspentAccounts,
-            Weekly.UnderspentCampaigns,
-            Weekly.Clicks,
-            Weekly.Impressions,
-            Weekly.Conversions,
-            Weekly.CTR,
-            Weekly.CPC,
-            Weekly.SIS,
-            Weekly.TOPSIS,
-            Weekly.PotentialNegativeSearchTerms,
-            Weekly.CampaignPerformance,
-            Weekly.AdGroupPerformance,
-            Weekly.AdGroupCPA,
-            Weekly.KeywordCPA,
-            # Daily.DisapprovedAds,
+            weekly.underspent_accounts,
+            weekly.underspent_campaigns,
+            weekly.clicks,
+            weekly.impressions,
+            weekly.conversions,
+            weekly.ctr,
+            weekly.cpc,
+            weekly.sis,
+            weekly.topsis,
+            weekly.potential_negative_search_terms,
+            weekly.campaign_performance,
+            weekly.ad_group_performance,
+            weekly.ad_group_cpa,
+            weekly.keyword_cpa,
+            # weekly.disapproved_ads,
         ]
     )
 
@@ -45,7 +91,7 @@ def reports(client: Client, external_customer_id: str, mode="Daily") -> Tuple[st
                 return poll(jobs)
 
         subject = f"Potential Issues With {external_customer_id} on Google"
-        prelude = f"<p>Please see the below potential issues when carrying out daily checks for {external_customer_id}</p>"
+        prelude = f"<p>Please see the below potential issues when carrying out {mode.lower()} checks for {external_customer_id}</p>"
         _metrics = [i() for i in metrics]
         jobs = [i.get(client, external_customer_id) for i in _metrics]
         poll(jobs)

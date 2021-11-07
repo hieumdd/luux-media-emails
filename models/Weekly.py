@@ -1,99 +1,114 @@
-from models.metrics import Metric
-from components import getter
-from components import composer
+from models.metrics import IMetric
+from components import getter, composer
 
 
-class UnderspentAccounts(Metric):
-    name = "Budget Account"
-    query = staticmethod(getter.underspent_account(7))
-    compose_body = staticmethod(composer.underspent_account)
+underspent_accounts: IMetric = {
+    "name": "Budget Account",
+    "query": getter.underspent_accounts(7),
+    "compose_body": composer.underspent_accounts,
+}
 
 
-class UnderspentCampaigns(Metric):
-    name = "Budget Campaigns"
-    query = staticmethod(getter.underspent_campaigns(7))
-    compose_body = staticmethod(composer.underspent_campaigns)
+underspent_campaigns: IMetric = {
+    "name": "Budget Campaigns",
+    "query": getter.underspent_campaigns(7),
+    "compose_body": composer.underspent_campaigns,
+}
 
 
-class Clicks(Metric):
-    name = "Clicks"
-    query = staticmethod(getter.metric_weekly("Clicks"))
-    compose_body = staticmethod(composer.metric_weekly("Clicks"))
+clicks: IMetric = {
+    "name": "Clicks",
+    "query": getter.metric_weekly("Clicks"),
+    "compose_body": composer.metric_weekly("Clicks"),
+}
 
 
-class Impressions(Metric):
-    name = "Impressions"
-    query = staticmethod(getter.metric_weekly("Impressions"))
-    compose_body = staticmethod(composer.metric_weekly("Impressions"))
+impressions: IMetric = {
+    "name": "Impressions",
+    "query": getter.metric_weekly("Impressions"),
+    "compose_body": composer.metric_weekly("Impressions"),
+}
 
 
-class Conversions(Metric):
-    name = "Conversions"
-    query = staticmethod(getter.metric_weekly("Conversions"))
-    compose_body = staticmethod(composer.metric_weekly("Conversions"))
+conversions: IMetric = {
+    "name": "Conversions",
+    "query": getter.metric_weekly("Conversions"),
+    "compose_body": composer.metric_weekly("Conversions"),
+}
 
 
-class CTR(Metric):
-    name = "CTR"
-    query = staticmethod(getter.metric_weekly("Ctr"))
-    compose_body = staticmethod(composer.metric_weekly("CTR"))
+ctr: IMetric = {
+    "name": "CTR",
+    "query": getter.metric_weekly("Ctr"),
+    "compose_body": composer.metric_weekly("CTR"),
+}
 
 
-class CPC(Metric):
-    name = "CPC"
-    query = staticmethod(getter.metric_weekly("AverageCpc"))
-    compose_body = staticmethod(composer.metric_weekly("CPC"))
+cpc: IMetric = {
+    "name": "CPC",
+    "query": getter.metric_weekly("AverageCpc"),
+    "compose_body": composer.metric_weekly("CPC"),
+}
 
 
-class SIS(Metric):
-    name = "SIS"
-    query = staticmethod(getter.metric_sis())
-    compose_body = staticmethod(composer.metric_weekly("SIS"))
+sis: IMetric = {
+    "name": "SIS",
+    "query": getter.metric_sis(),
+    "compose_body": composer.metric_weekly("SIS"),
+}
 
 
-class TOPSIS(Metric):
-    name = "TOPSIS"
-    query = staticmethod(getter.metric_topsis())
-    compose_body = staticmethod(composer.metric_weekly("TOPSIS"))
+topsis: IMetric = {
+    "name": "TOPSIS",
+    "query": getter.metric_topsis(),
+    "compose_body": composer.metric_weekly("TOPSIS"),
+}
 
 
-class GDNPlacements(Metric):
-    name = "GDN Placements"
-    query = staticmethod(getter.gdn_placements(7))
-    compose_body = staticmethod(composer.gdn_placements)
+gdn_placements: IMetric = {
+    "name": "GDN Placements",
+    "query": getter.gdn_placements(7),
+    "compose_body": composer.gdn_placements,
+}
 
 
-class PotentialNegativeSearchTerms(Metric):
-    name = "Potential Negative Search Terms"
-    query = staticmethod(getter.potential_negative_search_terms(7))
-    compose_body = staticmethod(composer.potential_negative_search_terms)
+potential_negative_search_terms: IMetric = {
+    "name": "Potential Negative Search Terms",
+    "query": getter.potential_negative_search_terms(7),
+    "compose_body": composer.potential_negative_search_terms,
+}
 
 
-class DisapprovedAds(Metric):
-    name = "Disapproved Ads"
-    query = staticmethod(getter.disapproved_ads(7))
-    compose_body = staticmethod(composer.disapproved_ads)
+disapproved_ads: IMetric = {
+    "name": "Disapproved Ads",
+    "query": getter.disapproved_ads(7),
+    "compose_body": composer.disapproved_ads,
+}
 
 
-class CampaignPerformance(Metric):
-    name = "Campaign Performance"
-    query = staticmethod(getter.metric_performance("CampaignName"))
-    compose_body = staticmethod(composer.metric_performance("Campaigns"))
+campaign_performance: IMetric = {
+    "name": "Campaign Performance",
+    "query": getter.metric_performance("CampaignName"),
+    "compose_body": composer.metric_performance("Campaigns"),
+}
 
 
-class AdGroupPerformance(Metric):
-    name = "Ad Group Performance"
-    query = staticmethod(getter.metric_performance("AdGroupName"))
-    compose_body = staticmethod(composer.metric_performance("Ad Groups"))
+ad_group_performance: IMetric = {
+    "name": "Ad Group Performance",
+    "query": getter.metric_performance("AdGroupName"),
+    "compose_body": composer.metric_performance("Ad Groups"),
+}
 
 
-class AdGroupCPA(Metric):
-    name = "Ad Group CPA Alerts"
-    query = staticmethod(getter.metric_cpa("AdGroupName"))
-    compose_body = staticmethod(composer.metric_cpa("Ad Groups"))
+ad_group_cpa: IMetric = {
+    "name": "Ad Group CPA Alerts",
+    "query": getter.metric_cpa("AdGroupName"),
+    "compose_body": composer.metric_cpa("Ad Groups"),
+}
 
 
-class KeywordCPA(Metric):
-    name = "Keyword CPA Alerts"
-    query = staticmethod(getter.metric_cpa("Criteria"))
-    compose_body = staticmethod(composer.metric_cpa("Keywords"))
+keyword_cpa: IMetric = {
+    "name": "Keyword CPA Alerts",
+    "query": getter.metric_cpa("Criteria"),
+    "compose_body": composer.metric_cpa("Keywords"),
+}
