@@ -306,7 +306,7 @@ def metric_performance(field: str) -> Callable[[str], str]:
                     ags._DATA_DATE AS Date,
                     CampaignName,
                     AdGroupName,
-                    AVG(Ctr) AS value
+                    AVG(Conversions) AS value
                 FROM {DATASET}.AdGroupStats_{TABLE_SUFFIX} ags
                 INNER JOIN {DATASET}.AdGroup_{TABLE_SUFFIX} ag
                     ON ags.CampaignId = ag.CampaignId
