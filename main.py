@@ -1,6 +1,6 @@
 from google.cloud import bigquery
 
-from models import reports
+from controllers.reports import report_factory, build_report
 from components.emails import send_email
 from tasks import tasks
 
@@ -10,6 +10,8 @@ RECEIVERS = [
 ]
 
 BQ_CLIENT = bigquery.Client()
+DATASET = "GoogleAds"
+TABLE_SUFFIX = "7248313550"
 
 
 def main(request) -> dict:
@@ -17,11 +19,13 @@ def main(request) -> dict:
     print(request_json)
 
     if "external_customer_id" in request_json and "mode" in request_json:
-        subject, report = reports.reports(
+        subject, report = build_report(
             BQ_CLIENT,
+            DATASET,
+            TABLE_SUFFIX,
             request_json["external_customer_id"],
-            request_json["mode"],
-        )()
+            report_factory(request_json["mode"]),
+        )
         response = {
             "emails_sent": len(send_email(RECEIVERS, subject, report)),
         }

@@ -1,14 +1,12 @@
 from typing import Callable
 
-from config import DATASET, TABLE_SUFFIX
 
-
-def metric_daily(field: str) -> Callable[[str], str]:
+def metric_daily(field: str) -> Callable[[str, str, str], str]:
     return (
-        lambda external_customer_id: f"""
+        lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
                 SELECT Date, SUM({field}) AS d0
-                FROM {DATASET}.AccountStats_{TABLE_SUFFIX}
+                FROM {dataset}.AccountStats_{table_suffix}
                 WHERE
                     _DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -8 DAY)
                     AND ExternalCustomerId = {external_customer_id}
@@ -33,12 +31,12 @@ def metric_daily(field: str) -> Callable[[str], str]:
     )
 
 
-def metric_weekly(field: str) -> Callable[[str], str]:
+def metric_weekly(field: str) -> Callable[[str, str, str], str]:
     return (
-        lambda external_customer_id: f"""
+        lambda dataset, table_suffix, external_customer_id: f"""
         WITH base AS (
             SELECT _DATA_DATE AS Date, SUM({field}) AS d0,
-            FROM {DATASET}.AccountStats_{TABLE_SUFFIX}
+            FROM {dataset}.AccountStats_{table_suffix}
             WHERE ExternalCustomerId = {external_customer_id}
             GROUP BY 1 
         ),
@@ -62,15 +60,15 @@ def metric_weekly(field: str) -> Callable[[str], str]:
     )
 
 
-def underspent_account(days: int) -> Callable[[str], str]:
+def underspent_accounts(days: int) -> Callable[[str, str, str], str]:
     return (
-        lambda external_customer_id: f"""
+        lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
                 SELECT SUM(bs.Cost) AS Cost, SUM(b.Amount) AS Amount,
-                FROM {DATASET}.BudgetStats_{TABLE_SUFFIX} bs
-                INNER JOIN {DATASET}.Budget_{TABLE_SUFFIX} b
+                FROM {dataset}.BudgetStats_{table_suffix} bs
+                INNER JOIN {dataset}.Budget_{table_suffix} b
                     ON bs.BudgetId = b.BudgetId
-                INNER JOIN {DATASET}.Campaign_{TABLE_SUFFIX} c
+                INNER JOIN {dataset}.Campaign_{table_suffix} c
                     ON bs.AssociatedCampaignId = c.CampaignId
                 WHERE
                     bs._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
@@ -88,18 +86,18 @@ def underspent_account(days: int) -> Callable[[str], str]:
     )
 
 
-def underspent_campaigns(days: int) -> Callable[[str], str]:
+def underspent_campaigns(days: int) -> Callable[[str, str, str], str]:
     return (
-        lambda external_customer_id: f"""
+        lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
                 SELECT 
                     c.CampaignName, 
                     SUM(bs.Cost) AS Cost,
                     SUM(b.Amount) AS Amount,
-                FROM {DATASET}.BudgetStats_{TABLE_SUFFIX} bs
-                INNER JOIN {DATASET}.Budget_{TABLE_SUFFIX} b
+                FROM {dataset}.BudgetStats_{table_suffix} bs
+                INNER JOIN {dataset}.Budget_{table_suffix} b
                     ON bs.BudgetId = b.BudgetId
-                INNER JOIN {DATASET}.Campaign_{TABLE_SUFFIX} c
+                INNER JOIN {dataset}.Campaign_{table_suffix} c
                 ON bs.AssociatedCampaignId = c.CampaignId
                 WHERE
                     bs._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
@@ -124,13 +122,13 @@ def underspent_campaigns(days: int) -> Callable[[str], str]:
     )
 
 
-def gdn_placements(days: int) -> Callable[[str], str]:
+def gdn_placements(days: int) -> Callable[[str, str, str], str]:
     return (
-        lambda external_customer_id: f"""
+        lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
                 SELECT p.DisplayName, SUM(pcs.Conversions) AS Conversions
-            FROM {DATASET}.PlacementConversionStats_{TABLE_SUFFIX} pcs
-            INNER JOIN {DATASET}.Placement_{TABLE_SUFFIX} p
+            FROM {dataset}.PlacementConversionStats_{table_suffix} pcs
+            INNER JOIN {dataset}.Placement_{table_suffix} p
                 ON pcs.CampaignId = p.CampaignId
                 AND pcs.AdGroupId = p.AdGroupId
             -- WHERE pcs._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
@@ -150,15 +148,15 @@ def gdn_placements(days: int) -> Callable[[str], str]:
     )
 
 
-def potential_negative_search_terms(days: int) -> Callable[[str], str]:
+def potential_negative_search_terms(days: int) -> Callable[[str, str, str], str]:
     return (
-        lambda external_customer_id: f"""
+        lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
                 SELECT
                     Query AS query,
                     SUM(Clicks) AS clicks,
                     SUM(Conversions) AS conversions
-                FROM {DATASET}.SearchQueryStats_{TABLE_SUFFIX}
+                FROM {dataset}.SearchQueryStats_{table_suffix}
                 WHERE
                     _DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
                     -- AND (Clicks > 50 AND Conversions = 0)
@@ -175,12 +173,12 @@ def potential_negative_search_terms(days: int) -> Callable[[str], str]:
     )
 
 
-def disapproved_ads(days: int) -> Callable[[str], str]:
+def disapproved_ads(days: int) -> Callable[[str, str, str], str]:
     return (
-        lambda external_customer_id: f"""
+        lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
                 SELECT ARRAY_AGG(DISTINCT CreativeId) AS creatives
-                FROM {DATASET}.Ad_{TABLE_SUFFIX}
+                FROM {dataset}.Ad_{table_suffix}
             WHERE _DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
                 AND CombinedApprovalStatus = "disapproved"
                 AND Status = "ENABLED"
@@ -191,14 +189,14 @@ def disapproved_ads(days: int) -> Callable[[str], str]:
     )
 
 
-def metric_sis() -> Callable[[str], str]:
+def metric_sis() -> Callable[[str, str, str], str]:
     return (
-        lambda external_customer_id: f"""
+        lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
                 SELECT
                     _DATA_DATE AS Date,
                     AVG(SAFE_CAST(REPLACE(SearchImpressionShare, '%', '') AS NUMERIC)) AS SearchImpressionShare
-                FROM {DATASET}.AccountNonClickStats_{TABLE_SUFFIX}
+                FROM {dataset}.AccountNonClickStats_{table_suffix}
                 WHERE ExternalCustomerId = {external_customer_id}
                 GROUP BY 1
             ),
@@ -222,14 +220,14 @@ def metric_sis() -> Callable[[str], str]:
     )
 
 
-def metric_topsis() -> Callable[[str], str]:
+def metric_topsis() -> Callable[[str, str, str], str]:
     return (
-        lambda external_customer_id: f"""
+        lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
                 SELECT
                     _DATA_DATE AS Date,
                     AVG(SAFE_CAST(REPLACE(SearchTopImpressionShare, '%', '') AS NUMERIC)) AS SearchTopImpressionShare
-                FROM {DATASET}.CampaignCrossDeviceStats_{TABLE_SUFFIX}
+                FROM {dataset}.CampaignCrossDeviceStats_{table_suffix}
                 WHERE ExternalCustomerId = {external_customer_id}
                 GROUP BY 1
             ),
@@ -253,9 +251,9 @@ def metric_topsis() -> Callable[[str], str]:
     )
 
 
-def metric_cpa(field: str) -> Callable[[str], str]:
+def metric_cpa(field: str) -> Callable[[str, str, str], str]:
     return (
-        lambda external_customer_id: f"""
+        lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
                 SELECT
                     kbs.AdGroupId,
@@ -264,13 +262,13 @@ def metric_cpa(field: str) -> Callable[[str], str]:
                     k.Criteria,
                     SUM(kbs.Cost) / 1000 AS Cost,
                     SUM(kbs.Conversions) AS Conversions,
-                FROM {DATASET}.KeywordBasicStats_{TABLE_SUFFIX} kbs
-                INNER JOIN {DATASET}.Keyword_{TABLE_SUFFIX} k
+                FROM {dataset}.KeywordBasicStats_{table_suffix} kbs
+                INNER JOIN {dataset}.Keyword_{table_suffix} k
                     ON kbs.CampaignId = k.CampaignId
                     AND kbs.AdGroupId = k.AdGroupId
                     AND kbs.CriterionId = k.CriterionId
                     AND kbs._DATA_DATE = k._DATA_DATE
-                INNER JOIN {DATASET}.AdGroup_{TABLE_SUFFIX} ag
+                INNER JOIN {dataset}.AdGroup_{table_suffix} ag
                     ON kbs.AdGroupId = ag.AdGroupId
                     AND kbs._DATA_DATE = ag._DATA_DATE
                 WHERE kbs._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)
@@ -298,21 +296,21 @@ def metric_cpa(field: str) -> Callable[[str], str]:
     )
 
 
-def metric_performance(field: str) -> Callable[[str], str]:
+def metric_performance(field: str) -> Callable[[str, str, str], str]:
     return (
-        lambda external_customer_id: f"""
+        lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
                 SELECT
                     ags._DATA_DATE AS Date,
                     CampaignName,
                     AdGroupName,
                     AVG(Conversions) AS value
-                FROM {DATASET}.AdGroupStats_{TABLE_SUFFIX} ags
-                INNER JOIN {DATASET}.AdGroup_{TABLE_SUFFIX} ag
+                FROM {dataset}.AdGroupStats_{table_suffix} ags
+                INNER JOIN {dataset}.AdGroup_{table_suffix} ag
                     ON ags.CampaignId = ag.CampaignId
                     AND ags.AdGroupId = ag.AdGroupId
                     AND ags._DATA_DATE = ag._DATA_DATE
-                INNER JOIN {DATASET}.Campaign_{TABLE_SUFFIX} c
+                INNER JOIN {dataset}.Campaign_{table_suffix} c
                     ON ags.CampaignId = c.CampaignId
                     AND ags._DATA_DATE = c._DATA_DATE
                 WHERE ags.ExternalCustomerId = {external_customer_id}
