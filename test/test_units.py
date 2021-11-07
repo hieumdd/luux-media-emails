@@ -8,8 +8,8 @@ ACCOUNTS = [
     "8735453121",
 ]
 MODE = [
-    "Daily",
-    "Weekly",
+    "daily",
+    "weekly",
 ]
 
 

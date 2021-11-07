@@ -5,9 +5,6 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 
-SENDER = "siddhantmehandru.developer@gmail.com"
-
-
 def compose_message(
     sender: str,
     receiver: str,
@@ -23,17 +20,22 @@ def compose_message(
     return message
 
 
-def send_email(receivers: list[str], subject: str, report: str) -> list[str]:
+def send_email(
+    sender: str,
+    receivers: list[str],
+    subject: str,
+    report: str,
+) -> list[str]:
     with smtplib.SMTP_SSL(
         "smtp.gmail.com",
         465,
         context=ssl.create_default_context(),
     ) as server:
-        server.login(SENDER, os.getenv("SENDER_PWD"))
+        server.login(sender, os.getenv("SENDER_PWD", ""))
         for receiver in receivers:
             server.sendmail(
-                SENDER,
+                sender,
                 receiver,
-                compose_message(SENDER, receiver, subject, report).as_string(),
+                compose_message(sender, receiver, subject, report).as_string(),
             )
     return receivers
