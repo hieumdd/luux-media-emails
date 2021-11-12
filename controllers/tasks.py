@@ -2,9 +2,7 @@ import os
 import json
 import uuid
 
-from google.cloud import tasks_v2, bigquery # type: ignore
-
-TASKS_CLIENT = tasks_v2.CloudTasksClient()
+from google.cloud import tasks_v2, bigquery  # type: ignore
 
 
 def get_customers(
@@ -20,7 +18,8 @@ def get_customers(
 
 
 def tasks(
-    client: bigquery.Client,
+    task_client: tasks_v2.CloudTasksClient,
+    bq_client: bigquery.Client,
     dataset: str,
     table_suffix: str,
     tasks_data: dict,
@@ -30,8 +29,8 @@ def tasks(
         "us-central1",
         "luux_media_emails",
     )
-    parent = TASKS_CLIENT.queue_path(*cloud_tasks_path)
-    accounts = get_customers(client, dataset, table_suffix)
+    parent = task_client.queue_path(*cloud_tasks_path)
+    accounts = get_customers(bq_client, dataset, table_suffix)
     payloads = [
         {
             "name": f"{account}-{uuid.uuid4()}",
@@ -44,9 +43,7 @@ def tasks(
     ]
     tasks = [
         {
-            "name": TASKS_CLIENT.task_path(
-                *cloud_tasks_path, task=str(payload["name"])
-            ),
+            "name": task_client.task_path(*cloud_tasks_path, task=str(payload["name"])),
             "http_request": {
                 "http_method": tasks_v2.HttpMethod.POST,
                 "url": os.getenv("PUBLIC_URL"),
@@ -62,7 +59,7 @@ def tasks(
         for payload in payloads
     ]
     responses = [
-        TASKS_CLIENT.create_task(
+        task_client.create_task(
             request={
                 "parent": parent,
                 "task": task,

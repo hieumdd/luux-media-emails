@@ -1,8 +1,8 @@
-from google.cloud import bigquery
+from google.cloud import bigquery, tasks_v2 # type: ignore
 
 from controllers.reports import report_factory, build_report
 from controllers.emails import send_email
-from tasks import tasks
+from controllers.tasks import tasks
 
 SENDER = "siddhantmehandru.developer@gmail.com"
 RECEIVERS = [
@@ -11,6 +11,7 @@ RECEIVERS = [
 ]
 
 BQ_CLIENT = bigquery.Client()
+TASKS_CLIENT = tasks_v2.CloudTasksClient()
 DATASET = "GoogleAds"
 TABLE_SUFFIX = "3413321199"
 
@@ -38,7 +39,7 @@ def main(request) -> dict:
             ),
         }
     elif "tasks" in request_json:
-        response = tasks(BQ_CLIENT, DATASET, TABLE_SUFFIX, request_json)
+        response = tasks(TASKS_CLIENT, BQ_CLIENT, DATASET, TABLE_SUFFIX, request_json)
     else:
         raise ValueError(request_json)
 
