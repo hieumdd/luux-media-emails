@@ -5,7 +5,7 @@ import pytest
 from main import main
 
 ACCOUNTS = [
-    "8735453121",
+    "1897347778",
 ]
 MODE = [
     "daily",

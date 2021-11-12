@@ -7,12 +7,12 @@ from tasks import tasks
 SENDER = "siddhantmehandru.developer@gmail.com"
 RECEIVERS = [
     "hieumdd@gmail.com",
-    "jhamb285@gmail.com",
+    # "jhamb285@gmail.com",
 ]
 
 BQ_CLIENT = bigquery.Client()
 DATASET = "GoogleAds"
-TABLE_SUFFIX = "7248313550"
+TABLE_SUFFIX = "3413321199"
 
 
 def main(request) -> dict:
@@ -38,7 +38,7 @@ def main(request) -> dict:
             ),
         }
     elif "tasks" in request_json:
-        response = tasks(BQ_CLIENT, request_json)
+        response = tasks(BQ_CLIENT, DATASET, TABLE_SUFFIX, request_json)
     else:
         raise ValueError(request_json)
 

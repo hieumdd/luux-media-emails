@@ -55,11 +55,11 @@ def reports(
     metrics = (
         [
             daily.underspent_accounts,
-            daily.underspent_campaigns,
-            daily.clicks,
-            daily.impressions,
-            daily.conversions,
-            daily.ctr,
+            # daily.underspent_campaigns,
+            # daily.clicks,
+            # daily.impressions,
+            # daily.conversions,
+            # daily.ctr,
             daily.potential_negative_search_terms,
             # daily.disapproved_ads,
         ]
