@@ -2,8 +2,8 @@ import time
 from typing import TypedDict, Tuple, Callable
 
 from google.cloud.bigquery import Client, LoadJob
-from models import daily, weekly
-from models.metrics import IMetric
+from models.metrics.base import IMetric
+from models.metrics import daily, weekly
 
 
 class IReport(TypedDict):

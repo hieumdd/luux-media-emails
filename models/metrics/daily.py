@@ -1,4 +1,4 @@
-from models.metrics import IMetric
+from models.metrics.base import IMetric
 from components import getter, composer
 
 underspent_accounts: IMetric = {
