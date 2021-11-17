@@ -1,8 +1,8 @@
-from google.cloud import bigquery, tasks_v2 # type: ignore
+from google.cloud import bigquery, tasks_v2  # type: ignore
 
 from controllers.reports import report_factory, build_report
 from controllers.emails import send_email
-from controllers.tasks import tasks
+from controllers.tasks import create_tasks
 
 SENDER = "siddhantmehandru.developer@gmail.com"
 RECEIVERS = [
@@ -17,31 +17,29 @@ TABLE_SUFFIX = "3413321199"
 
 
 def main(request) -> dict:
-    request_json = request.get_json()
-    print(request_json)
+    data = request.get_json()
+    print(data)
 
-    if "external_customer_id" in request_json and "mode" in request_json:
-        subject, report = build_report(
-            BQ_CLIENT,
-            DATASET,
-            TABLE_SUFFIX,
-            request_json["external_customer_id"],
-            report_factory(request_json["mode"]),
-        )
+    if "external_customer_id" in data and "mode" in data:
         response = {
             "emails_sent": len(
                 send_email(
                     SENDER,
                     RECEIVERS,
-                    subject,
-                    report,
+                    *build_report(
+                        BQ_CLIENT,
+                        DATASET,
+                        TABLE_SUFFIX,
+                        data["external_customer_id"],
+                        report_factory(data["mode"]),
+                    )
                 )
             ),
         }
-    elif "tasks" in request_json:
-        response = tasks(TASKS_CLIENT, BQ_CLIENT, DATASET, TABLE_SUFFIX, request_json)
+    elif "tasks" in data:
+        response = create_tasks(BQ_CLIENT, TASKS_CLIENT, DATASET, TABLE_SUFFIX, data)
     else:
-        raise ValueError(request_json)
+        raise ValueError(data)
 
     print(response)
     return response

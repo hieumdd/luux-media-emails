@@ -1,6 +1,6 @@
 import time
 
-from google.cloud.bigquery import Client, LoadJob
+from google.cloud import bigquery
 
 from controllers.metrics import get, compose
 from models.reports import IReport, report_daily, report_weekly
@@ -13,7 +13,7 @@ def report_factory(mode: str = "daily") -> IReport:
         return report_weekly
 
 
-def poll(jobs: LoadJob) -> None:
+def poll(jobs: bigquery.LoadJob) -> None:
     undone_jobs = [job for job in jobs if not job.done()]
     if undone_jobs:
         time.sleep(5)
@@ -21,7 +21,7 @@ def poll(jobs: LoadJob) -> None:
 
 
 def build_report(
-    client: Client,
+    client: bigquery.Client,
     dataset: str,
     table_suffix: str,
     external_customer_id: str,
