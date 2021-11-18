@@ -1,5 +1,5 @@
 from models.metrics.base import IMetric
-from components import getter, composer
+from models import getter, composer
 
 underspent_accounts: IMetric = {
     "name": "Budget Account",
