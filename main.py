@@ -7,7 +7,7 @@ from controllers.tasks import create_tasks
 SENDER = "siddhantmehandru.developer@gmail.com"
 RECEIVERS = [
     "hieumdd@gmail.com",
-    # "jhamb285@gmail.com",
+    "jhamb285@gmail.com",
 ]
 
 BQ_CLIENT = bigquery.Client()
@@ -21,20 +21,27 @@ def main(request) -> dict:
     print(data)
 
     if "external_customer_id" in data and "mode" in data:
-        response = {
-            "emails_sent": len(
+        subject, report = build_report(
+            BQ_CLIENT,
+            DATASET,
+            TABLE_SUFFIX,
+            data["external_customer_id"],
+            report_factory(data["mode"]),
+        )
+        emails_sent = (
+            len(
                 send_email(
                     SENDER,
                     RECEIVERS,
-                    *build_report(
-                        BQ_CLIENT,
-                        DATASET,
-                        TABLE_SUFFIX,
-                        data["external_customer_id"],
-                        report_factory(data["mode"]),
-                    )
+                    subject,
+                    report,
                 )
-            ),
+            )
+            if report
+            else 0
+        )
+        response = {
+            "emails_sent": emails_sent,
         }
     elif "tasks" in data:
         response = create_tasks(BQ_CLIENT, TASKS_CLIENT, DATASET, TABLE_SUFFIX, data)

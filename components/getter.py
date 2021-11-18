@@ -66,24 +66,26 @@ def underspent_accounts(days: int) -> Getter:
     return (
         lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
-                SELECT SUM(bs.Cost) AS Cost, SUM(b.Amount) AS Amount,
+                SELECT 
+                    SUM(bs.Cost) AS Cost,
+                    SUM(b.Amount) AS Amount,
                 FROM {dataset}.BudgetStats_{table_suffix} bs
                 INNER JOIN {dataset}.Budget_{table_suffix} b
                     ON bs.BudgetId = b.BudgetId
-                INNER JOIN {dataset}.Campaign_{table_suffix} c
-                    ON bs.AssociatedCampaignId = c.CampaignId
+                    AND bs._DATA_DATE = b._DATA_DATE
                 WHERE
                     bs._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
                     AND bs.ExternalCustomerId = {external_customer_id}
                     AND b._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
                     AND b.ExternalCustomerId = {external_customer_id}
-                    AND c._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
-                    AND c.ExternalCustomerId = {external_customer_id}
-                )
-            SELECT
-                (Cost - Amount) / 100 AS underspent,
-                (Cost - Amount) / Amount AS percentage
-            FROM base
+                ),
+            base2 AS (
+                SELECT
+                    (Cost - Amount) / 100 AS underspent,
+                    (Cost - Amount) / Amount AS percentage
+                FROM base
+            )
+            SELECT * FROM base2 WHERE underspent IS NOT NULL
         """
     )
 

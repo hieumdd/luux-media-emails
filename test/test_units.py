@@ -30,7 +30,7 @@ def test_emails(account: str, mode: str):
             "mode": mode,
         }
     )
-    assert res["emails_sent"] > 0
+    assert res["emails_sent"] >= 0
 
 
 @pytest.mark.parametrize(

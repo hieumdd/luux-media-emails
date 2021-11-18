@@ -1,3 +1,4 @@
+from typing import Optional
 import time
 
 from google.cloud import bigquery
@@ -26,7 +27,7 @@ def build_report(
     table_suffix: str,
     external_customer_id: str,
     report: IReport,
-) -> tuple[str, str]:
+) -> tuple[str, Optional[str]]:
     subject = f"Potential Issues With {external_customer_id} on Google"
     prelude = f"<p>Please see the below potential issues when carrying out {report['mode'].lower()} checks for {external_customer_id}</p>"
     jobs = [
@@ -47,5 +48,5 @@ def build_report(
     ]
     return (
         subject,
-        f"<html><body>{prelude}{''.join(body)}</body></html>",
+        f"<html><body>{prelude}{''.join(body)}</body></html>" if body else None,
     )
