@@ -51,13 +51,18 @@ def underspent_accounts(data: dict) -> str:
     """
 
 
-def underspent_campaigns(data: dict) -> str:
+def underspent_budgets(data: dict) -> str:
     lines = [
-        f"<li>{i['campaigns']} - {format_percentage(i['underspent'])} underspent</li>"
-        for i in data["campaigns"]
+        "<li>"
+        + f"{budget['BudgetName']} - {format_percentage(budget['underspent'])} underspent"
+        + "<ul>"
+        + "".join([f"<li>{campaign}</li>" for campaign in budget["Campaigns"]])
+        + "</ul>"
+        + "</li>"
+        for budget in data["budgets"]
     ]
     return f"""
-    <p>The campaigns that underspent are listed below</p>
+    <p>The budgets that underspent are listed below</p>
     <ul>{''.join(lines)}</ul>
     """
 

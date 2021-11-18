@@ -88,12 +88,13 @@ def underspent_accounts(days: int) -> Getter:
     )
 
 
-def underspent_campaigns(days: int) -> Getter:
+def underspent_budgets(days: int) -> Getter:
     return (
         lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
                 SELECT 
-                    c.CampaignName, 
+                    c.CampaignName,
+                    b.BudgetName,
                     SUM(bs.Cost) AS Cost,
                     SUM(b.Amount) AS Amount,
                 FROM {dataset}.BudgetStats_{table_suffix} bs
@@ -108,18 +109,23 @@ def underspent_campaigns(days: int) -> Getter:
                     AND b.ExternalCustomerId = {external_customer_id}
                     AND c._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
                     AND c.ExternalCustomerId = {external_customer_id}
-                GROUP BY 1
+                GROUP BY 1, 2
             ),
             base2 AS (
-                SELECT CampaignName, (Cost - Amount) / Amount AS underspent
+                SELECT
+                    BudgetName,
+                    ARRAY_AGG(CampaignName) AS Campaigns,
+                    (SUM(Cost) - AVG(Amount)) / AVG(Amount) AS underspent
                 FROM base
-                WHERE Cost < Amount
+                GROUP BY 1
+                HAVING SUM(Cost) < AVG(Amount)
             ),
             base3 AS (
-                SELECT ARRAY_AGG(STRUCT(CampaignName AS campaigns, underspent)) AS campaigns
+                SELECT
+                    ARRAY_AGG(STRUCT(BudgetName,Campaigns,underspent)) AS budgets
                 FROM base2
             )
-            SELECT * FROM base3 WHERE ARRAY_LENGTH(campaigns) > 0
+            SELECT * FROM base3 WHERE ARRAY_LENGTH(budgets) > 0
         """
     )
 

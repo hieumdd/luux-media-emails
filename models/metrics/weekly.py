@@ -9,10 +9,10 @@ underspent_accounts: IMetric = {
 }
 
 
-underspent_campaigns: IMetric = {
+underspent_budgets: IMetric = {
     "name": "Budget Campaigns",
-    "query": getter.underspent_campaigns(7),
-    "compose_body": composer.underspent_campaigns,
+    "query": getter.underspent_budgets(7),
+    "compose_body": composer.underspent_budgets,
 }
 
 
