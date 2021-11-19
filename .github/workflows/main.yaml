@@ -6,9 +6,11 @@ on:
 
 env:
   FUNCTION_NAME: luux_media_emails
+  PROJECT_ID: luux-media
+  GCP_SA: etl-158@luux-media.iam.gserviceaccount.com
 
 jobs:
-  setup:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -26,9 +28,9 @@ jobs:
           --entry-point=main
           --region=us-central1
           --timeout=530
-          --project=${{ secrets.PROJECT_ID }}
+          --project=${{ env.PROJECT_ID }}
           --memory=512MB
           --runtime=python39
           --trigger-http
-          --service-account=${{ secrets.GCP_SA }}
-          --set-env-vars=PROJECT_ID=${{ secrets.PROJECT_ID }},SENDER_PWD=${{ secrets.SENDER_PWD }}
+          --service-account=${{ env.GCP_SA }}
+          --set-env-vars=PROJECT_ID=${{ secrets.PROJECT_ID }},SENDER_PWD=${{ secrets.SENDER_PWD }},GCP_SA=${{ env.GCP_SA }}

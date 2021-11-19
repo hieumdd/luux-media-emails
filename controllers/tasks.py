@@ -5,7 +5,7 @@ import uuid
 from google.cloud import tasks_v2, bigquery  # type: ignore
 from google import auth
 
-SERVICE_ACCOUNT, PROJECT_ID = auth.default()
+_, PROJECT_ID = auth.default()
 CLOUD_TASKS_PATH = (PROJECT_ID, "us-central1", "luux_media_emails")
 
 
@@ -46,7 +46,7 @@ def create_tasks(
                 "http_method": tasks_v2.HttpMethod.POST,
                 "url": os.getenv("PUBLIC_URL"),
                 "oidc_token": {
-                    "service_account_email": SERVICE_ACCOUNT.service_account_email,
+                    "service_account_email": os.getenv('GCP_SA'),
                 },
                 "headers": {"Content-type": "application/json"},
                 "body": json.dumps(payload["payload"]).encode(),
