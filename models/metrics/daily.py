@@ -1,5 +1,5 @@
-from models.metrics import IMetric
-from components import getter, composer
+from models.metrics.base import IMetric
+from models import getter, composer
 
 underspent_accounts: IMetric = {
     "name": "Budget Account",
@@ -8,10 +8,10 @@ underspent_accounts: IMetric = {
 }
 
 
-underspent_campaigns: IMetric = {
+underspent_budgets: IMetric = {
     "name": "Budget Campaigns",
-    "query": getter.underspent_campaigns(1),
-    "compose_body": composer.underspent_campaigns,
+    "query": getter.underspent_budgets(1),
+    "compose_body": composer.underspent_budgets,
 }
 
 clicks: IMetric = {

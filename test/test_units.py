@@ -2,11 +2,9 @@ from unittest.mock import Mock
 
 import pytest
 
-from main import main
+from main import main, BQ_CLIENT, DATASET, TABLE_SUFFIX
+from controllers.tasks import get_customers
 
-ACCOUNTS = [
-    "8735453121",
-]
 MODE = [
     "daily",
     "weekly",
@@ -14,14 +12,12 @@ MODE = [
 
 
 def run(data: dict) -> dict:
-    req = Mock(get_json=Mock(return_value=data), args=data)
-    res = main(req)
-    return res
+    return main(Mock(get_json=Mock(return_value=data), args=data))
 
 
 @pytest.mark.parametrize(
     "account",
-    ACCOUNTS,
+    get_customers(BQ_CLIENT, DATASET, TABLE_SUFFIX),
 )
 @pytest.mark.parametrize(
     "mode",
@@ -34,7 +30,7 @@ def test_emails(account: str, mode: str):
             "mode": mode,
         }
     )
-    assert res["emails_sent"] > 0
+    assert res["emails_sent"] >= 0
 
 
 @pytest.mark.parametrize(

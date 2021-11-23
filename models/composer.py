@@ -1,5 +1,7 @@
 from typing import Callable, Union
 
+MetricComposer = Callable[[dict], str]
+
 
 def format_scalar(number: Union[float, int]) -> str:
     return f"{number:,}"
@@ -9,7 +11,7 @@ def format_percentage(number: Union[float, int]) -> str:
     return f"{number:.2%}"
 
 
-def metric_daily(name: str) -> Callable[[dict], str]:
+def metric_daily(name: str) -> MetricComposer:
     def compose(data: dict) -> str:
         d1 = (
             f"<p>{name} were {format_percentage(data['d1'])} compared to the previous day</p>"
@@ -26,7 +28,7 @@ def metric_daily(name: str) -> Callable[[dict], str]:
     return compose
 
 
-def metric_weekly(name: str) -> Callable[[dict], str]:
+def metric_weekly(name: str) -> MetricComposer:
     def compose(data: dict) -> str:
         d7 = (
             f"<p>{name} were {format_percentage(data['d7'])} compared to the previous week</p>"
@@ -49,13 +51,18 @@ def underspent_accounts(data: dict) -> str:
     """
 
 
-def underspent_campaigns(data: dict) -> str:
+def underspent_budgets(data: dict) -> str:
     lines = [
-        f"<li>{i['campaigns']} - {format_percentage(i['underspent'])} underspent</li>"
-        for i in data["campaigns"]
+        "<li>"
+        + f"{budget['BudgetName']} - {format_percentage(budget['underspent'])} underspent"
+        + "<ul>"
+        + "".join([f"<li>{campaign}</li>" for campaign in budget["Campaigns"]])
+        + "</ul>"
+        + "</li>"
+        for budget in data["budgets"]
     ]
     return f"""
-    <p>The campaigns that underspent are listed below</p>
+    <p>The budgets that underspent are listed below</p>
     <ul>{''.join(lines)}</ul>
     """
 
@@ -83,7 +90,7 @@ def disapproved_ads(data: dict) -> str:
     """
 
 
-def metric_cpa(field: str) -> Callable[[dict], str]:
+def metric_cpa(field: str) -> MetricComposer:
     def compose(data: dict) -> str:
         lines = [f"<li>{i}</li>" for i in data["values"]]
         return f"""
@@ -94,7 +101,7 @@ def metric_cpa(field: str) -> Callable[[dict], str]:
     return compose
 
 
-def metric_performance(field: str) -> Callable[[dict], str]:
+def metric_performance(field: str) -> MetricComposer:
     def compose(data: dict) -> str:
         week_lines = [f"<li>{i['key']}</li>" for i in data["value"] if i["d7"] < 0]
         month_lines = [f"<li>{i['key']}</li>" for i in data["value"] if i["d30"] < 0]

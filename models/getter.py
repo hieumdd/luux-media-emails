@@ -1,7 +1,9 @@
 from typing import Callable
 
+Getter = Callable[[str, str, str], str]
 
-def metric_daily(field: str) -> Callable[[str, str, str], str]:
+
+def metric_daily(field: str) -> Getter:
     return (
         lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
@@ -31,7 +33,7 @@ def metric_daily(field: str) -> Callable[[str, str, str], str]:
     )
 
 
-def metric_weekly(field: str) -> Callable[[str, str, str], str]:
+def metric_weekly(field: str) -> Getter:
     return (
         lambda dataset, table_suffix, external_customer_id: f"""
         WITH base AS (
@@ -60,38 +62,41 @@ def metric_weekly(field: str) -> Callable[[str, str, str], str]:
     )
 
 
-def underspent_accounts(days: int) -> Callable[[str, str, str], str]:
+def underspent_accounts(days: int) -> Getter:
     return (
         lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
-                SELECT SUM(bs.Cost) AS Cost, SUM(b.Amount) AS Amount,
+                SELECT 
+                    SUM(bs.Cost) AS Cost,
+                    SUM(b.Amount) AS Amount,
                 FROM {dataset}.BudgetStats_{table_suffix} bs
                 INNER JOIN {dataset}.Budget_{table_suffix} b
                     ON bs.BudgetId = b.BudgetId
-                INNER JOIN {dataset}.Campaign_{table_suffix} c
-                    ON bs.AssociatedCampaignId = c.CampaignId
+                    AND bs._DATA_DATE = b._DATA_DATE
                 WHERE
                     bs._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
                     AND bs.ExternalCustomerId = {external_customer_id}
                     AND b._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
                     AND b.ExternalCustomerId = {external_customer_id}
-                    AND c._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
-                    AND c.ExternalCustomerId = {external_customer_id}
-                )
-            SELECT
-                (Cost - Amount) / 100 AS underspent,
-                (Cost - Amount) / Amount AS percentage
-            FROM base
+                ),
+            base2 AS (
+                SELECT
+                    (Cost - Amount) / 100 AS underspent,
+                    (Cost - Amount) / Amount AS percentage
+                FROM base
+            )
+            SELECT * FROM base2 WHERE underspent IS NOT NULL
         """
     )
 
 
-def underspent_campaigns(days: int) -> Callable[[str, str, str], str]:
+def underspent_budgets(days: int) -> Getter:
     return (
         lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
                 SELECT 
-                    c.CampaignName, 
+                    c.CampaignName,
+                    b.BudgetName,
                     SUM(bs.Cost) AS Cost,
                     SUM(b.Amount) AS Amount,
                 FROM {dataset}.BudgetStats_{table_suffix} bs
@@ -106,23 +111,28 @@ def underspent_campaigns(days: int) -> Callable[[str, str, str], str]:
                     AND b.ExternalCustomerId = {external_customer_id}
                     AND c._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
                     AND c.ExternalCustomerId = {external_customer_id}
-                GROUP BY 1
+                GROUP BY 1, 2
             ),
             base2 AS (
-                SELECT CampaignName, (Cost - Amount) / Amount AS underspent
+                SELECT
+                    BudgetName,
+                    ARRAY_AGG(CampaignName) AS Campaigns,
+                    (SUM(Cost) - AVG(Amount)) / AVG(Amount) AS underspent
                 FROM base
-                WHERE Cost < Amount
+                GROUP BY 1
+                HAVING SUM(Cost) < AVG(Amount)
             ),
             base3 AS (
-                SELECT ARRAY_AGG(STRUCT(CampaignName AS campaigns, underspent)) AS campaigns
+                SELECT
+                    ARRAY_AGG(STRUCT(BudgetName,Campaigns,underspent)) AS budgets
                 FROM base2
             )
-            SELECT * FROM base3 WHERE ARRAY_LENGTH(campaigns) > 0
+            SELECT * FROM base3 WHERE ARRAY_LENGTH(budgets) > 0
         """
     )
 
 
-def gdn_placements(days: int) -> Callable[[str, str, str], str]:
+def gdn_placements(days: int) -> Getter:
     return (
         lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
@@ -148,7 +158,7 @@ def gdn_placements(days: int) -> Callable[[str, str, str], str]:
     )
 
 
-def potential_negative_search_terms(days: int) -> Callable[[str, str, str], str]:
+def potential_negative_search_terms(days: int) -> Getter:
     return (
         lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
@@ -173,7 +183,7 @@ def potential_negative_search_terms(days: int) -> Callable[[str, str, str], str]
     )
 
 
-def disapproved_ads(days: int) -> Callable[[str, str, str], str]:
+def disapproved_ads(days: int) -> Getter:
     return (
         lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
@@ -189,7 +199,7 @@ def disapproved_ads(days: int) -> Callable[[str, str, str], str]:
     )
 
 
-def metric_sis() -> Callable[[str, str, str], str]:
+def metric_sis() -> Getter:
     return (
         lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
@@ -220,7 +230,7 @@ def metric_sis() -> Callable[[str, str, str], str]:
     )
 
 
-def metric_topsis() -> Callable[[str, str, str], str]:
+def metric_topsis() -> Getter:
     return (
         lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
@@ -251,7 +261,7 @@ def metric_topsis() -> Callable[[str, str, str], str]:
     )
 
 
-def metric_cpa(field: str) -> Callable[[str, str, str], str]:
+def metric_cpa(field: str) -> Getter:
     return (
         lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
@@ -296,7 +306,7 @@ def metric_cpa(field: str) -> Callable[[str, str, str], str]:
     )
 
 
-def metric_performance(field: str) -> Callable[[str, str, str], str]:
+def metric_performance(field: str) -> Getter:
     return (
         lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (

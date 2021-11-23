@@ -1,9 +1,16 @@
-from models.metrics import IMetric
+from google.cloud.bigquery import Client, QueryJob
+
+from models.metrics.base import IMetric
 
 
-def get(client, dataset, table_suffix, external_customer_id, metric: IMetric) -> str:
-    query = metric["query"](dataset, table_suffix, external_customer_id)
-    job = client.query(query)
+def get(
+    client: Client,
+    dataset: str,
+    table_suffix: str,
+    external_customer_id: str,
+    metric: IMetric,
+) -> QueryJob:
+    job = client.query(metric["query"](dataset, table_suffix, external_customer_id))
     return job
 
 

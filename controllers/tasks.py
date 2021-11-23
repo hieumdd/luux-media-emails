@@ -2,9 +2,11 @@ import os
 import json
 import uuid
 
-from google.cloud import tasks_v2, bigquery # type: ignore
+from google.cloud import tasks_v2, bigquery  # type: ignore
+from google import auth
 
-TASKS_CLIENT = tasks_v2.CloudTasksClient()
+_, PROJECT_ID = auth.default()
+CLOUD_TASKS_PATH = (PROJECT_ID, "us-central1", "luux_media_emails")
 
 
 def get_customers(
@@ -19,19 +21,14 @@ def get_customers(
     return [str(i["ExternalCustomerId"]) for i in rows]
 
 
-def tasks(
-    client: bigquery.Client,
+def create_tasks(
+    task_client: tasks_v2.CloudTasksClient,
+    bq_client: bigquery.Client,
     dataset: str,
     table_suffix: str,
     tasks_data: dict,
 ) -> dict:
-    cloud_tasks_path = (
-        os.getenv("PROJECT_ID", ""),
-        "us-central1",
-        "luux_media_emails",
-    )
-    parent = TASKS_CLIENT.queue_path(*cloud_tasks_path)
-    accounts = get_customers(client, dataset, table_suffix)
+    accounts = get_customers(bq_client, dataset, table_suffix)
     payloads = [
         {
             "name": f"{account}-{uuid.uuid4()}",
@@ -44,33 +41,30 @@ def tasks(
     ]
     tasks = [
         {
-            "name": TASKS_CLIENT.task_path(
-                *cloud_tasks_path, task=str(payload["name"])
-            ),
+            "name": task_client.task_path(*CLOUD_TASKS_PATH, task=str(payload["name"])),
             "http_request": {
                 "http_method": tasks_v2.HttpMethod.POST,
                 "url": os.getenv("PUBLIC_URL"),
                 "oidc_token": {
-                    "service_account_email": os.getenv("GCP_SA"),
+                    "service_account_email": os.getenv('GCP_SA'),
                 },
-                "headers": {
-                    "Content-type": "application/json",
-                },
+                "headers": {"Content-type": "application/json"},
                 "body": json.dumps(payload["payload"]).encode(),
             },
         }
         for payload in payloads
     ]
-    responses = [
-        TASKS_CLIENT.create_task(
-            request={
-                "parent": parent,
-                "task": task,
-            }
-        )
-        for task in tasks
-    ]
     return {
-        "messages_sent": len(responses),
+        "messages_sent": len(
+            [
+                task_client.create_task(
+                    request={
+                        "parent": task_client.queue_path(*CLOUD_TASKS_PATH),
+                        "task": task,
+                    }
+                )
+                for task in tasks
+            ]
+        ),
         "tasks_data": tasks_data,
     }

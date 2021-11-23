@@ -2,8 +2,8 @@ import time
 from typing import TypedDict, Tuple, Callable
 
 from google.cloud.bigquery import Client, LoadJob
-from models import daily, weekly
-from models.metrics import IMetric
+from models.metrics.base import IMetric
+from models.metrics import daily, weekly
 
 
 class IReport(TypedDict):
@@ -15,13 +15,13 @@ report_daily: IReport = {
     "mode": "Daily",
     "metrics": [
         daily.underspent_accounts,
-        daily.underspent_campaigns,
+        daily.underspent_budgets,
         daily.clicks,
         daily.impressions,
         daily.conversions,
         daily.ctr,
         daily.potential_negative_search_terms,
-        # daily.disapproved_ads,
+        # daily.disapproved_ads, # Removed
     ],
 }
 
@@ -29,7 +29,7 @@ report_weekly: IReport = {
     "mode": "Weekly",
     "metrics": [
         weekly.underspent_accounts,
-        weekly.underspent_campaigns,
+        weekly.underspent_budgets,
         weekly.clicks,
         weekly.impressions,
         weekly.conversions,
@@ -42,7 +42,7 @@ report_weekly: IReport = {
         weekly.ad_group_performance,
         weekly.ad_group_cpa,
         weekly.keyword_cpa,
-        # weekly.disapproved_ads,
+        # weekly.disapproved_ads, # Removed
     ],
 }
 

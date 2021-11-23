@@ -1,2 +1,0 @@
-DATASET = "GoogleAds"
-TABLE_SUFFIX = "7248313550"

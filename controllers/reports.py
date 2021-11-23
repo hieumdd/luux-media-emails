@@ -1,6 +1,7 @@
+from typing import Optional
 import time
 
-from google.cloud.bigquery import Client, LoadJob
+from google.cloud import bigquery
 
 from controllers.metrics import get, compose
 from models.reports import IReport, report_daily, report_weekly
@@ -13,7 +14,7 @@ def report_factory(mode: str = "daily") -> IReport:
         return report_weekly
 
 
-def poll(jobs: LoadJob) -> None:
+def poll(jobs: bigquery.LoadJob) -> None:
     undone_jobs = [job for job in jobs if not job.done()]
     if undone_jobs:
         time.sleep(5)
@@ -21,12 +22,12 @@ def poll(jobs: LoadJob) -> None:
 
 
 def build_report(
-    client: Client,
+    client: bigquery.Client,
     dataset: str,
     table_suffix: str,
     external_customer_id: str,
     report: IReport,
-) -> tuple[str, str]:
+) -> tuple[str, Optional[str]]:
     subject = f"Potential Issues With {external_customer_id} on Google"
     prelude = f"<p>Please see the below potential issues when carrying out {report['mode'].lower()} checks for {external_customer_id}</p>"
     jobs = [
@@ -47,5 +48,5 @@ def build_report(
     ]
     return (
         subject,
-        f"<html><body>{prelude}{''.join(body)}</body></html>",
+        f"<html><body>{prelude}{''.join(body)}</body></html>" if body else None,
     )
