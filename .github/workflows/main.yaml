@@ -33,4 +33,4 @@ jobs:
           --runtime=python39
           --trigger-http
           --service-account=${{ env.GCP_SA }}
-          --set-env-vars=,SENDER_PWD=${{ secrets.SENDER_PWD }},GCP_SA=${{ env.GCP_SA }}
+          --set-env-vars=SENDER_PWD=${{ secrets.SENDER_PWD }},GCP_SA=${{ env.GCP_SA }}
