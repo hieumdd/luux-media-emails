@@ -7,7 +7,8 @@ from controllers.tasks import create_tasks
 SENDER = "siddhantmehandru.developer@gmail.com"
 RECEIVERS = [
     "hieumdd@gmail.com",
-    # "jhamb285@gmail.com",
+    "jhamb285@gmail.com",
+    "kevin@luux-media.com",
 ]
 
 BQ_CLIENT = bigquery.Client()
