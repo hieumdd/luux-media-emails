@@ -3,7 +3,8 @@ import time
 
 from google.cloud import bigquery
 
-from controllers.metrics import get, compose
+from libs.bigquery import get_metric
+from models.metrics.base import compose
 from models.reports import IReport, report_daily, report_weekly
 
 
@@ -22,7 +23,6 @@ def poll(jobs: bigquery.LoadJob) -> None:
 
 
 def build_report(
-    client: bigquery.Client,
     dataset: str,
     table_suffix: str,
     external_customer_id: str,
@@ -31,15 +31,16 @@ def build_report(
     subject = f"Potential Issues With {external_customer_id} on Google"
     prelude = f"<p>Please see the below potential issues when carrying out {report['mode'].lower()} checks for {external_customer_id}</p>"
     jobs = [
-        get(client, dataset, table_suffix, external_customer_id, i)
+        get_metric(dataset, table_suffix, external_customer_id, i)
         for i in report["metrics"]
     ]
     poll(jobs)
+    jobs_results = [i.result() for i in jobs]
     jobs_results = [
-        [dict(row.items()) for row in job.result()][0]
-        if job.result().total_rows == 1
+        [dict(row.items()) for row in job][0]
+        if job.total_rows == 1
         else None
-        for job in jobs
+        for job in [i.result() for i in jobs]
     ]
     body = [
         compose(metric, result)

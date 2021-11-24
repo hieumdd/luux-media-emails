@@ -13,34 +13,40 @@ def format_percentage(number: Union[float, int]) -> str:
 
 def metric_daily(name: str) -> MetricComposer:
     def compose(data: dict) -> str:
-        d1 = (
-            f"<p>{name} were {format_percentage(data['d1'])} compared to the previous day</p>"
-            if data["d1"] < 0
-            else ""
-        )
-        d7_avg = (
-            f"<p>{name} were {format_percentage(data['d7_avg'])} compared to the previous 7 day average</p>"
-            if data["d7_avg"] < 0
-            else ""
-        )
-        return d1 + d7_avg
+        if not data['d1'] or not data['d7_avg']:
+            return ""
+        else:
+            d1 = (
+                f"<p>{name} were {format_percentage(data['d1'])} compared to the previous day</p>"
+                if data["d1"] < 0
+                else ""
+            )
+            d7_avg = (
+                f"<p>{name} were {format_percentage(data['d7_avg'])} compared to the previous 7 day average</p>"
+                if data["d7_avg"] < 0
+                else ""
+            )
+            return d1 + d7_avg
 
     return compose
 
 
 def metric_weekly(name: str) -> MetricComposer:
     def compose(data: dict) -> str:
-        d7 = (
-            f"<p>{name} were {format_percentage(data['d7'])} compared to the previous week</p>"
-            if data["d7"] < 0
-            else ""
-        )
-        d30 = (
-            f"<p>{name} were {format_percentage(data['d30'])} compared to viewing MOM performance</p>"
-            if data["d30"] < 0
-            else ""
-        )
-        return d7 + d30
+        if not data['d7'] or not data['d30']:
+            return ""
+        else:
+            d7 = (
+                f"<p>{name} were {format_percentage(data['d7'])} compared to the previous week</p>"
+                if data["d7"] < 0
+                else ""
+            )
+            d30 = (
+                f"<p>{name} were {format_percentage(data['d30'])} compared to viewing MOM performance</p>"
+                if data["d30"] < 0
+                else ""
+            )
+            return d7 + d30
 
     return compose
 

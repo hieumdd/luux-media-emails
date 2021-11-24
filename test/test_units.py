@@ -2,7 +2,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from main import main, BQ_CLIENT, DATASET, TABLE_SUFFIX
+from main import main, DATASET, TABLE_SUFFIX
 from controllers.tasks import get_customers
 
 MODE = [
@@ -17,7 +17,7 @@ def run(data: dict) -> dict:
 
 @pytest.mark.parametrize(
     "account",
-    get_customers(BQ_CLIENT, DATASET, TABLE_SUFFIX),
+    get_customers(DATASET, TABLE_SUFFIX),
 )
 @pytest.mark.parametrize(
     "mode",
