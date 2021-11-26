@@ -102,13 +102,13 @@ ad_group_performance: IMetric = {
 
 ad_group_cpa: IMetric = {
     "name": "Ad Group CPA Alerts",
-    "query": getter.metric_cpa("AdGroupName"),
+    "query": getter.ad_group_cpa(),
     "compose_body": composer.metric_cpa("Ad Groups"),
 }
 
 
 keyword_cpa: IMetric = {
     "name": "Keyword CPA Alerts",
-    "query": getter.metric_cpa("Criteria"),
+    "query": getter.keyword_cpa(),
     "compose_body": composer.metric_cpa("Keywords"),
 }

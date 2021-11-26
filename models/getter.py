@@ -265,47 +265,91 @@ def metric_topsis() -> Getter:
     )
 
 
-def metric_cpa(field: str) -> Getter:
+def ad_group_cpa() -> Getter:
     return (
         lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
                 SELECT
-                    kbs.AdGroupId,
                     ag.AdGroupName,
-                    kbs.CriterionId,
-                    k.Criteria,
-                    SUM(kbs.Cost) / 1000 AS Cost,
-                    SUM(kbs.Conversions) AS Conversions,
-                FROM {dataset}.KeywordBasicStats_{table_suffix} kbs
-                INNER JOIN {dataset}.Keyword_{table_suffix} k
-                    ON kbs.CampaignId = k.CampaignId
-                    AND kbs.AdGroupId = k.AdGroupId
-                    AND kbs.CriterionId = k.CriterionId
-                    AND kbs._DATA_DATE = k._DATA_DATE
+                    c.CampaignName,
+                    SUM(ags.Cost / 1e6) AS Cost,
+                    SUM(ags.Conversions) AS Conversions,
+                FROM {dataset}.AdGroupStats_{table_suffix} ags
                 INNER JOIN {dataset}.AdGroup_{table_suffix} ag
-                    ON kbs.AdGroupId = ag.AdGroupId
-                    AND kbs._DATA_DATE = ag._DATA_DATE
-                WHERE kbs._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)
-                AND kbs.ExternalCustomerId = {external_customer_id}
-                GROUP BY 1, 2, 3, 4
+                    ON ags.AdGroupId = ag.AdGroupId
+                    AND ags.CampaignId = ag.CampaignId
+                    AND ags._DATA_DATE = ag._DATA_DATE
+                INNER JOIN {dataset}.Campaign_{table_suffix} c
+                    ON ags.CampaignId = c.CampaignId
+                    AND ags._DATA_DATE = c._DATA_DATE
+                WHERE
+                    ags._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)
+                    AND ags.ExternalCustomerId = {external_customer_id}
+                GROUP BY 1, 2
             ),
             base2 AS (
                 SELECT
-                    {field},
-                    SAFE_DIVIDE(SUM(Cost),SUM(Conversions)) AS cpa,
+                    AdGroupName,
+                    CampaignName,
+                    Cost,
+                    Conversions,
+                    SAFE_DIVIDE(Cost, Conversions) AS cpa,
+                    (SELECT SAFE_DIVIDE(SUM(Cost), SUM(Conversions)) FROM base) AS avg_cpa,
                 FROM base
-                GROUP BY 1
-            ),
-            base3 AS (
-                SELECT
-                    {field},
-                    cpa,
-                    (SELECT AVG(CPA) FROM base2) AS cpa_avg
-                FROM base2
             )
-            SELECT ARRAY_AGG({field}) AS values
-            FROM base3
-            WHERE (cpa - cpa_avg) > 0.5 * cpa_avg
+            SELECT 
+                ARRAY_AGG(AdGroupName || ' - ' || CampaignName) AS values,
+                AVG(avg_cpa) AS avg,
+            FROM base2 
+            WHERE SAFE_DIVIDE(cpa - avg_cpa, avg_cpa) > 0.3
+        """
+    )
+
+
+def keyword_cpa() -> Getter:
+    return (
+        lambda dataset, table_suffix, external_customer_id: f"""
+            WITH base AS (
+                SELECT
+                    kw.Criteria ,
+                    ag.AdGroupName,
+                    c.CampaignName,
+                    SUM(kws.Cost / 1e6) AS Cost,
+                    SUM(kws.Conversions) AS Conversions,
+                FROM {dataset}.KeywordStats_{table_suffix} kws
+                INNER JOIN {dataset}.Keyword_{table_suffix} kw
+                    ON kws.CriterionId = kw.CriterionId
+                    AND kws.AdGroupId = kw.AdGroupId
+                    AND kws.CampaignId = kw.CampaignId
+                    AND kws._DATA_DATE = kw._DATA_DATE
+                INNER JOIN {dataset}.AdGroup_{table_suffix} ag
+                    ON kws.AdGroupId = ag.AdGroupId
+                    AND kws.CampaignId = ag.CampaignId
+                    AND kws._DATA_DATE = ag._DATA_DATE
+                INNER JOIN {dataset}.Campaign_{table_suffix} c
+                    ON kws.CampaignId = c.CampaignId
+                    AND kws._DATA_DATE = c._DATA_DATE
+                WHERE
+                    kws._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)
+                    AND kws.ExternalCustomerId = {external_customer_id}
+                GROUP BY 1, 2, 3
+            ),
+            base2 AS (
+                SELECT
+                    Criteria,
+                    AdGroupName,
+                    CampaignName,
+                    Cost,
+                    Conversions,
+                    SAFE_DIVIDE(Cost, Conversions) AS cpa,
+                    (SELECT SAFE_DIVIDE(SUM(Cost), SUM(Conversions)) FROM base) AS avg_cpa
+                FROM base
+            )
+            SELECT 
+                ARRAY_AGG(Criteria || ' - ' || AdGroupName || ' - ' || CampaignName) AS values,
+                AVG(avg_cpa) AS avg
+            FROM base2 
+            WHERE SAFE_DIVIDE(cpa - avg_cpa, avg_cpa) > 0.3
         """
     )
 

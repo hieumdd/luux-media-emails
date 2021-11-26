@@ -4,7 +4,7 @@ MetricComposer = Callable[[dict], str]
 
 
 def format_scalar(number: Union[float, int]) -> str:
-    return f"{number:,}"
+    return f"{number:,.2f}"
 
 
 def format_percentage(number: Union[float, int]) -> str:
@@ -13,7 +13,7 @@ def format_percentage(number: Union[float, int]) -> str:
 
 def metric_daily(name: str) -> MetricComposer:
     def compose(data: dict) -> str:
-        if not data['d1'] or not data['d7_avg']:
+        if not data["d1"] or not data["d7_avg"]:
             return ""
         else:
             d1 = (
@@ -97,7 +97,7 @@ def metric_cpa(field: str) -> MetricComposer:
     def compose(data: dict) -> str:
         lines = [f"<li>{i}</li>" for i in data["values"]]
         return f"""
-        <p>The following {field} have a CPA that is 50% or more higher than the account average:</p>
+        <p>The following {field} have a CPA that is 30% or more higher than the account average of {format_scalar(data['avg'])}:</p>
         <ul>{''.join(lines)}</ul>
         """
 
