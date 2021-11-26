@@ -33,20 +33,17 @@ def metric_daily(name: str) -> MetricComposer:
 
 def metric_weekly(name: str) -> MetricComposer:
     def compose(data: dict) -> str:
-        if not data['d7'] or not data['d30']:
-            return ""
-        else:
-            d7 = (
-                f"<p>{name} were {format_percentage(data['d7'])} compared to the previous week</p>"
-                if data["d7"] < 0
-                else ""
-            )
-            d30 = (
-                f"<p>{name} were {format_percentage(data['d30'])} compared to viewing MOM performance</p>"
-                if data["d30"] < 0
-                else ""
-            )
-            return d7 + d30
+        dw = (
+            f"<p>{name} were {format_percentage(data['dw'])} compared to the previous week</p>"
+            if data["dw"] < 0
+            else ""
+        )
+        dmom = (
+            f"<p>{name} were {format_percentage(data['dmom'])} compared to viewing MOM performance</p>"
+            if data["dmom"] < 0
+            else ""
+        )
+        return dw + dmom
 
     return compose
 
