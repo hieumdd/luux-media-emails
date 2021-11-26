@@ -209,27 +209,33 @@ def metric_sis() -> Getter:
             WITH base AS (
                 SELECT
                     _DATA_DATE AS Date,
-                    AVG(SAFE_CAST(REPLACE(SearchImpressionShare, '%', '') AS NUMERIC)) AS SearchImpressionShare
+                    Month,
+                    EXTRACT(DAY FROM _DATA_DATE) AS Day, 
+                    AVG(SAFE_CAST(REPLACE(SearchImpressionShare, '%', '') AS NUMERIC)) AS d0,
                 FROM {dataset}.AccountNonClickStats_{table_suffix}
                 WHERE ExternalCustomerId = {external_customer_id}
-                GROUP BY 1
+                GROUP BY 1, 2, 3
             ),
             base2 AS (
                 SELECT
-                    Date, 
-                    SearchImpressionShare AS d0,
-                    LEAD(SearchImpressionShare, 7) OVER (ORDER BY Date DESC) AS d7,
-                    LEAD(SearchImpressionShare, 30) OVER (ORDER BY Date DESC) AS d30,
+                    Date,
+                    Month,
+                    d0,
+                    LEAD(d0, 7) OVER (ORDER BY Date DESC) AS d7,
+                    LEAD(d0, 1) OVER (PARTITION BY Day ORDER BY Month DESC) AS d_mom,
                 FROM base
             ),
             base3 AS (
                 SELECT
-                    SAFE_DIVIDE(SUM(d0)-SUM(d7),SUM(d7)) as d7,
-                    SAFE_DIVIDE(SUM(d0)-SUM(d30),SUM(d30)) as d30,
-                FROM base2
-                WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)
-                )
-            SELECT * FROM base3
+                    (SELECT SUM(d0) FROM base2 WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)) AS d7,
+                    (SELECT SUM(d7) FROM base2 WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)) AS d14,
+                    (SELECT SUM(d0) FROM base2 WHERE Date >= DATE_TRUNC(CURRENT_DATE(), MONTH)) AS dtm,
+                    (SELECT SUM(d_mom) FROM base2 WHERE Date >= DATE_TRUNC(CURRENT_DATE(), MONTH)) AS dlm,
+            )
+            SELECT
+                SAFE_DIVIDE(d7-d14,d14) AS dw,
+                SAFE_DIVIDE(dtm-dlm, dlm) AS dmom,
+            FROM base3
     """
     )
 
@@ -240,27 +246,33 @@ def metric_topsis() -> Getter:
             WITH base AS (
                 SELECT
                     _DATA_DATE AS Date,
-                    AVG(SAFE_CAST(REPLACE(SearchTopImpressionShare, '%', '') AS NUMERIC)) AS SearchTopImpressionShare
+                    Month,
+                    EXTRACT(DAY FROM _DATA_DATE) AS Day, 
+                    AVG(SAFE_CAST(REPLACE(SearchTopImpressionShare, '%', '') AS NUMERIC)) AS d0,
                 FROM {dataset}.CampaignCrossDeviceStats_{table_suffix}
                 WHERE ExternalCustomerId = {external_customer_id}
-                GROUP BY 1
+                GROUP BY 1, 2, 3
             ),
             base2 AS (
                 SELECT
-                    Date, 
-                    SearchTopImpressionShare AS d0,
-                    LEAD(SearchTopImpressionShare, 7) OVER (ORDER BY Date DESC) AS d7,
-                    LEAD(SearchTopImpressionShare, 30) OVER (ORDER BY Date DESC) AS d30,
+                    Date,
+                    Month,
+                    d0,
+                    LEAD(d0, 7) OVER (ORDER BY Date DESC) AS d7,
+                    LEAD(d0, 1) OVER (PARTITION BY Day ORDER BY Month DESC) AS d_mom,
                 FROM base
             ),
             base3 AS (
                 SELECT
-                    SAFE_DIVIDE(SUM(d0)-SUM(d7),SUM(d7)) as d7,
-                    SAFE_DIVIDE(SUM(d0)-SUM(d30),SUM(d30)) as d30,
-                FROM base2
-                WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)
-                )
-            SELECT * FROM base3
+                    (SELECT SUM(d0) FROM base2 WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)) AS d7,
+                    (SELECT SUM(d7) FROM base2 WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)) AS d14,
+                    (SELECT SUM(d0) FROM base2 WHERE Date >= DATE_TRUNC(CURRENT_DATE(), MONTH)) AS dtm,
+                    (SELECT SUM(d_mom) FROM base2 WHERE Date >= DATE_TRUNC(CURRENT_DATE(), MONTH)) AS dlm,
+            )
+            SELECT
+                SAFE_DIVIDE(d7-d14,d14) AS dw,
+                SAFE_DIVIDE(dtm-dlm, dlm) AS dmom,
+            FROM base3
     """
     )
 

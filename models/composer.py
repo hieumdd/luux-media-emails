@@ -33,17 +33,20 @@ def metric_daily(name: str) -> MetricComposer:
 
 def metric_weekly(name: str) -> MetricComposer:
     def compose(data: dict) -> str:
-        dw = (
-            f"<p>{name} were {format_percentage(data['dw'])} compared to the previous week</p>"
-            if data["dw"] < 0
-            else ""
-        )
-        dmom = (
-            f"<p>{name} were {format_percentage(data['dmom'])} compared to viewing MOM performance</p>"
-            if data["dmom"] < 0
-            else ""
-        )
-        return dw + dmom
+        if data['dw'] and data['dmom']:
+            dw = (
+                f"<p>{name} were {format_percentage(data['dw'])} compared to the previous week</p>"
+                if data["dw"] < 0
+                else ""
+            )
+            dmom = (
+                f"<p>{name} were {format_percentage(data['dmom'])} compared to viewing MOM performance</p>"
+                if data["dmom"] < 0
+                else ""
+            )
+            return dw + dmom
+        else:
+            return ""
 
     return compose
 
@@ -95,11 +98,14 @@ def disapproved_ads(data: dict) -> str:
 
 def metric_cpa(field: str) -> MetricComposer:
     def compose(data: dict) -> str:
-        lines = [f"<li>{i}</li>" for i in data["values"]]
-        return f"""
-        <p>The following {field} have a CPA that is 30% or more higher than the account average of {format_scalar(data['avg'])}:</p>
-        <ul>{''.join(lines)}</ul>
-        """
+        if data['avg'] and data['values']:
+            lines = [f"<li>{i}</li>" for i in data["values"]]
+            return f"""
+            <p>The following {field} have a CPA that is 30% or more higher than the account average of {format_scalar(data['avg'])}:</p>
+            <ul>{''.join(lines)}</ul>
+            """
+        else:
+            return ""
 
     return compose
 
