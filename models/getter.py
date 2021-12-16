@@ -1,104 +1,99 @@
 from typing import Callable
 
 Getter = Callable[[str, str, str], str]
+Callable[[str], Callable[[str, str, str], str]]
+Callable[[str], Callable[[str], Callable[[str, str, str], str]]]
+
+def metric_daily(table: str):
+    def query(field: str) -> Getter:
+        return (
+            lambda dataset, table_suffix, external_customer_id: f"""
+                WITH base AS (
+                    SELECT Date, SUM({field}) AS d0
+                    FROM {dataset}.{table}_{table_suffix}
+                    WHERE
+                        _DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -8 DAY)
+                        AND ExternalCustomerId = {external_customer_id}
+                GROUP BY 1
+                ),
+                base2 AS (
+                    SELECT
+                        Date, d0,
+                        LEAD(d0) OVER (ORDER BY Date DESC) AS d1,
+                        (
+                            SELECT AVG(d0) FROM base
+                            WHERE Date <> DATE_ADD(CURRENT_DATE(), INTERVAL -1 DAY)
+                        ) AS d7_avg
+                    FROM base
+                ),
+                base3 AS (
+                SELECT
+                    SAFE_DIVIDE(d0-d1,d1) as d1,
+                    SAFE_DIVIDE(d0-d7_avg,d7_avg) as d7_avg
+                FROM base2
+                WHERE Date = DATE_ADD(CURRENT_DATE(), INTERVAL -1 DAY)
+                )
+                SELECT * FROM base3
+                """
+        )
+
+    return query
 
 
-def metric_daily(field: str) -> Getter:
-    return (
-        lambda dataset, table_suffix, external_customer_id: f"""
+metric_daily_basic = metric_daily("AccountBasicStats")
+metric_daily_adv = metric_daily("AccountStats")
+
+
+def metric_weekly(table: str):
+    def query(field: str) -> Getter:
+        return (
+            lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
-                SELECT Date, SUM({field}) AS d0
-                FROM {dataset}.AccountStats_{table_suffix}
-                WHERE
-                    _DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -8 DAY)
-                    AND ExternalCustomerId = {external_customer_id}
-            GROUP BY 1
+                SELECT
+                    _DATA_DATE AS Date,
+                    DATE_TRUNC(Date, Day) AS Month,
+                    EXTRACT(DAY FROM _DATA_DATE) AS Day,
+                    SUM({field}) AS d0,
+                FROM {dataset}.{table}_{table_suffix}
+                WHERE ExternalCustomerId = {external_customer_id}
+                GROUP BY 1, 2
             ),
             base2 AS (
                 SELECT
-                    Date, d0,
-                    LEAD(d0) OVER (ORDER BY Date DESC) AS d1,
-                    (SELECT AVG(d0) FROM base) AS d7_avg
+                    Date,
+                    Month,
+                    d0,
+                    LEAD(d0, 7) OVER (ORDER BY Date DESC) AS d7,
+                    LEAD(d0, 1) OVER (PARTITION BY Day ORDER BY Month DESC) AS d_mom,
                 FROM base
             ),
             base3 AS (
-            SELECT
-                SAFE_DIVIDE(d0-d1,d1) as d1,
-                SAFE_DIVIDE(d0-d7_avg,d7_avg) as d7_avg
-            FROM base2
-            WHERE Date = DATE_ADD(CURRENT_DATE(), INTERVAL -1 DAY)
+                SELECT
+                    (SELECT SUM(d0) FROM base2 WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)) AS d7,
+                    (SELECT SUM(d7) FROM base2 WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)) AS d14,
+                    (SELECT SUM(d0) FROM base2 WHERE Date >= DATE_TRUNC(CURRENT_DATE(), MONTH)) AS dtm,
+                    (SELECT SUM(d_mom) FROM base2 WHERE Date >= DATE_TRUNC(CURRENT_DATE(), MONTH)) AS dlm,
             )
-            SELECT * FROM base3
+            SELECT
+                SAFE_DIVIDE(d7-d14,d14) AS dw,
+                SAFE_DIVIDE(dtm-dlm, dlm) AS dmom,
+            FROM base3
             """
-    )
-
-
-def metric_weekly(field: str) -> Getter:
-    return (
-        lambda dataset, table_suffix, external_customer_id: f"""
-        WITH base AS (
-            SELECT _DATA_DATE AS Date, SUM({field}) AS d0,
-            FROM {dataset}.AccountStats_{table_suffix}
-            WHERE ExternalCustomerId = {external_customer_id}
-            GROUP BY 1 
-        ),
-        base2 AS (
-            SELECT
-                Date,
-                d0,
-                LEAD(d0, 7) OVER (ORDER BY Date DESC) AS d7,
-                LEAD(d0, 30) OVER (ORDER BY Date DESC) AS d30
-            FROM base
-        ),
-        base3 AS (
-            SELECT
-                SAFE_DIVIDE(SUM(d0)-SUM(d7),SUM(d7)) as d7,
-                SAFE_DIVIDE(SUM(d0)-SUM(d30),SUM(d30)) as d30,
-            FROM base2
-            WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)
         )
-        SELECT * FROM base3
-    """
-    )
+    return query
 
+metric_weekly_basic = metric_weekly("AccountBasicStats")
+metric_weekly_adv = metric_weekly("AccountStats")
 
 def underspent_accounts(days: int) -> Getter:
     return (
         lambda dataset, table_suffix, external_customer_id: f"""
-            WITH base AS (
-                SELECT 
-                    SUM(bs.Cost) AS Cost,
-                    SUM(b.Amount) AS Amount,
-                FROM {dataset}.BudgetStats_{table_suffix} bs
-                INNER JOIN {dataset}.Budget_{table_suffix} b
-                    ON bs.BudgetId = b.BudgetId
-                    AND bs._DATA_DATE = b._DATA_DATE
-                WHERE
-                    bs._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
-                    AND bs.ExternalCustomerId = {external_customer_id}
-                    AND b._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
-                    AND b.ExternalCustomerId = {external_customer_id}
-                ),
-            base2 AS (
-                SELECT
-                    (Cost - Amount) / 100 AS underspent,
-                    (Cost - Amount) / Amount AS percentage
-                FROM base
-            )
-            SELECT * FROM base2 WHERE underspent IS NOT NULL
-        """
-    )
-
-
-def underspent_budgets(days: int) -> Getter:
-    return (
-        lambda dataset, table_suffix, external_customer_id: f"""
-            WITH base AS (
-                SELECT 
+        WITH base AS (SELECT 
+                    bs._DATA_DATE AS Date,
                     c.CampaignName,
                     b.BudgetName,
-                    SUM(bs.Cost) AS Cost,
-                    SUM(b.Amount) AS Amount,
+                    SUM(bs.Cost) / 1000000 AS Cost,
+                    AVG(b.Amount) / 1000000 AS Amount,
                 FROM {dataset}.BudgetStats_{table_suffix} bs
                 INNER JOIN {dataset}.Budget_{table_suffix} b
                     ON bs.BudgetId = b.BudgetId
@@ -107,27 +102,93 @@ def underspent_budgets(days: int) -> Getter:
                 WHERE
                     bs._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
                     AND bs.ExternalCustomerId = {external_customer_id}
-                    AND b._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
+                    AND b._DATA_DATE = b._LATEST_DATE
                     AND b.ExternalCustomerId = {external_customer_id}
-                    AND c._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
+                    AND c._DATA_DATE = c._LATEST_DATE
                     AND c.ExternalCustomerId = {external_customer_id}
-                GROUP BY 1, 2
+                GROUP BY 1, 2, 3
             ),
             base2 AS (
                 SELECT
+                    Date,
                     BudgetName,
                     ARRAY_AGG(CampaignName) AS Campaigns,
-                    (SUM(Cost) - AVG(Amount)) / AVG(Amount) AS underspent
+                    SUM(Cost) AS Cost,
+                    AVG(Amount) AS Amount,
                 FROM base
-                GROUP BY 1
-                HAVING SUM(Cost) < AVG(Amount)
+                GROUP BY 1, 2
             ),
             base3 AS (
                 SELECT
-                    ARRAY_AGG(STRUCT(BudgetName,Campaigns,underspent)) AS budgets
+                    BudgetName,
+                    ANY_VALUE(Campaigns) AS Campaigns,
+                    -- Date,
+                    SUM(Cost) AS Cost,
+                    SUM(Amount) AS Amount,
+                    (SUM(Cost) - AVG(Amount)) / AVG(Amount) AS underspent
                 FROM base2
+                GROUP BY 1
+                HAVING Cost < Amount
             )
-            SELECT * FROM base3 WHERE ARRAY_LENGTH(budgets) > 0
+            SELECT
+                SUM(Cost) - SUM(Amount) AS underspent,
+                SAFE_DIVIDE(SUM(Cost) - SUM(Amount), SUM(Amount)) AS percentage,
+            FROM base3
+        """
+    )
+
+
+def underspent_budgets(days: int) -> Getter:
+    return (
+        lambda dataset, table_suffix, external_customer_id: f"""
+            WITH base AS (SELECT 
+                    bs._DATA_DATE AS Date,
+                    c.CampaignName,
+                    b.BudgetName,
+                    SUM(bs.Cost) / 1000000 AS Cost,
+                    AVG(b.Amount) / 1000000 AS Amount,
+                FROM {dataset}.BudgetStats_{table_suffix} bs
+                INNER JOIN {dataset}.Budget_{table_suffix} b
+                    ON bs.BudgetId = b.BudgetId
+                INNER JOIN {dataset}.Campaign_{table_suffix} c
+                ON bs.AssociatedCampaignId = c.CampaignId
+                WHERE
+                    bs._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
+                    AND bs.ExternalCustomerId = {external_customer_id}
+                    AND b._DATA_DATE = b._LATEST_DATE
+                    AND b.ExternalCustomerId = {external_customer_id}
+                    AND c._DATA_DATE = c._LATEST_DATE
+                    AND c.ExternalCustomerId = {external_customer_id}
+                GROUP BY 1, 2, 3
+            ),
+            base2 AS (
+                SELECT
+                    Date,
+                    BudgetName,
+                    ARRAY_AGG(CampaignName) AS Campaigns,
+                    SUM(Cost) AS Cost,
+                    AVG(Amount) AS Amount,
+                FROM base
+                GROUP BY 1, 2
+            ),
+            base3 AS (
+                SELECT
+                    BudgetName,
+                    ANY_VALUE(Campaigns) AS Campaigns,
+                    -- Date,
+                    SUM(Cost),
+                    SUM(Amount),
+                    (SUM(Cost) - AVG(Amount)) / AVG(Amount) AS underspent
+                FROM base2
+                GROUP BY 1
+                HAVING SUM(Cost) < AVG(Amount)
+            ),
+            base4 AS (
+                SELECT
+                    ARRAY_AGG(STRUCT(BudgetName,Campaigns,underspent)) AS budgets
+                FROM base3
+            )
+            SELECT * FROM base4 WHERE ARRAY_LENGTH(budgets) > 0
         """
     )
 
@@ -205,27 +266,33 @@ def metric_sis() -> Getter:
             WITH base AS (
                 SELECT
                     _DATA_DATE AS Date,
-                    AVG(SAFE_CAST(REPLACE(SearchImpressionShare, '%', '') AS NUMERIC)) AS SearchImpressionShare
+                    Month,
+                    EXTRACT(DAY FROM _DATA_DATE) AS Day, 
+                    AVG(SAFE_CAST(REPLACE(SearchImpressionShare, '%', '') AS NUMERIC)) AS d0,
                 FROM {dataset}.AccountNonClickStats_{table_suffix}
                 WHERE ExternalCustomerId = {external_customer_id}
-                GROUP BY 1
+                GROUP BY 1, 2, 3
             ),
             base2 AS (
                 SELECT
-                    Date, 
-                    SearchImpressionShare AS d0,
-                    LEAD(SearchImpressionShare, 7) OVER (ORDER BY Date DESC) AS d7,
-                    LEAD(SearchImpressionShare, 30) OVER (ORDER BY Date DESC) AS d30,
+                    Date,
+                    Month,
+                    d0,
+                    LEAD(d0, 7) OVER (ORDER BY Date DESC) AS d7,
+                    LEAD(d0, 1) OVER (PARTITION BY Day ORDER BY Month DESC) AS d_mom,
                 FROM base
             ),
             base3 AS (
                 SELECT
-                    SAFE_DIVIDE(SUM(d0)-SUM(d7),SUM(d7)) as d7,
-                    SAFE_DIVIDE(SUM(d0)-SUM(d30),SUM(d30)) as d30,
-                FROM base2
-                WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)
-                )
-            SELECT * FROM base3
+                    (SELECT SUM(d0) FROM base2 WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)) AS d7,
+                    (SELECT SUM(d7) FROM base2 WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)) AS d14,
+                    (SELECT SUM(d0) FROM base2 WHERE Date >= DATE_TRUNC(CURRENT_DATE(), MONTH)) AS dtm,
+                    (SELECT SUM(d_mom) FROM base2 WHERE Date >= DATE_TRUNC(CURRENT_DATE(), MONTH)) AS dlm,
+            )
+            SELECT
+                SAFE_DIVIDE(d7-d14,d14) AS dw,
+                SAFE_DIVIDE(dtm-dlm, dlm) AS dmom,
+            FROM base3
     """
     )
 
@@ -236,72 +303,122 @@ def metric_topsis() -> Getter:
             WITH base AS (
                 SELECT
                     _DATA_DATE AS Date,
-                    AVG(SAFE_CAST(REPLACE(SearchTopImpressionShare, '%', '') AS NUMERIC)) AS SearchTopImpressionShare
+                    Month,
+                    EXTRACT(DAY FROM _DATA_DATE) AS Day, 
+                    AVG(SAFE_CAST(REPLACE(SearchTopImpressionShare, '%', '') AS NUMERIC)) AS d0,
                 FROM {dataset}.CampaignCrossDeviceStats_{table_suffix}
                 WHERE ExternalCustomerId = {external_customer_id}
-                GROUP BY 1
+                GROUP BY 1, 2, 3
             ),
             base2 AS (
                 SELECT
-                    Date, 
-                    SearchTopImpressionShare AS d0,
-                    LEAD(SearchTopImpressionShare, 7) OVER (ORDER BY Date DESC) AS d7,
-                    LEAD(SearchTopImpressionShare, 30) OVER (ORDER BY Date DESC) AS d30,
+                    Date,
+                    Month,
+                    d0,
+                    LEAD(d0, 7) OVER (ORDER BY Date DESC) AS d7,
+                    LEAD(d0, 1) OVER (PARTITION BY Day ORDER BY Month DESC) AS d_mom,
                 FROM base
             ),
             base3 AS (
                 SELECT
-                    SAFE_DIVIDE(SUM(d0)-SUM(d7),SUM(d7)) as d7,
-                    SAFE_DIVIDE(SUM(d0)-SUM(d30),SUM(d30)) as d30,
-                FROM base2
-                WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)
-                )
-            SELECT * FROM base3
+                    (SELECT SUM(d0) FROM base2 WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)) AS d7,
+                    (SELECT SUM(d7) FROM base2 WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)) AS d14,
+                    (SELECT SUM(d0) FROM base2 WHERE Date >= DATE_TRUNC(CURRENT_DATE(), MONTH)) AS dtm,
+                    (SELECT SUM(d_mom) FROM base2 WHERE Date >= DATE_TRUNC(CURRENT_DATE(), MONTH)) AS dlm,
+            )
+            SELECT
+                SAFE_DIVIDE(d7-d14,d14) AS dw,
+                SAFE_DIVIDE(dtm-dlm, dlm) AS dmom,
+            FROM base3
     """
     )
 
 
-def metric_cpa(field: str) -> Getter:
+def ad_group_cpa() -> Getter:
     return (
         lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
                 SELECT
-                    kbs.AdGroupId,
                     ag.AdGroupName,
-                    kbs.CriterionId,
-                    k.Criteria,
-                    SUM(kbs.Cost) / 1000 AS Cost,
-                    SUM(kbs.Conversions) AS Conversions,
-                FROM {dataset}.KeywordBasicStats_{table_suffix} kbs
-                INNER JOIN {dataset}.Keyword_{table_suffix} k
-                    ON kbs.CampaignId = k.CampaignId
-                    AND kbs.AdGroupId = k.AdGroupId
-                    AND kbs.CriterionId = k.CriterionId
-                    AND kbs._DATA_DATE = k._DATA_DATE
+                    c.CampaignName,
+                    SUM(ags.Cost / 1e6) AS Cost,
+                    SUM(ags.Conversions) AS Conversions,
+                FROM {dataset}.AdGroupStats_{table_suffix} ags
                 INNER JOIN {dataset}.AdGroup_{table_suffix} ag
-                    ON kbs.AdGroupId = ag.AdGroupId
-                    AND kbs._DATA_DATE = ag._DATA_DATE
-                WHERE kbs._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)
-                AND kbs.ExternalCustomerId = {external_customer_id}
-                GROUP BY 1, 2, 3, 4
+                    ON ags.AdGroupId = ag.AdGroupId
+                    AND ags.CampaignId = ag.CampaignId
+                    AND ags._DATA_DATE = ag._DATA_DATE
+                INNER JOIN {dataset}.Campaign_{table_suffix} c
+                    ON ags.CampaignId = c.CampaignId
+                    AND ags._DATA_DATE = c._DATA_DATE
+                WHERE
+                    ags._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)
+                    AND ags.ExternalCustomerId = {external_customer_id}
+                GROUP BY 1, 2
             ),
             base2 AS (
                 SELECT
-                    {field},
-                    SAFE_DIVIDE(SUM(Cost),SUM(Conversions)) AS cpa,
+                    AdGroupName,
+                    CampaignName,
+                    Cost,
+                    Conversions,
+                    SAFE_DIVIDE(Cost, Conversions) AS cpa,
+                    (SELECT SAFE_DIVIDE(SUM(Cost), SUM(Conversions)) FROM base) AS avg_cpa,
                 FROM base
-                GROUP BY 1
-            ),
-            base3 AS (
-                SELECT
-                    {field},
-                    cpa,
-                    (SELECT AVG(CPA) FROM base2) AS cpa_avg
-                FROM base2
             )
-            SELECT ARRAY_AGG({field}) AS values
-            FROM base3
-            WHERE (cpa - cpa_avg) > 0.5 * cpa_avg
+            SELECT 
+                ARRAY_AGG(AdGroupName || ' - ' || CampaignName) AS values,
+                AVG(avg_cpa) AS avg,
+            FROM base2 
+            WHERE SAFE_DIVIDE(cpa - avg_cpa, avg_cpa) > 0.3
+        """
+    )
+
+
+def keyword_cpa() -> Getter:
+    return (
+        lambda dataset, table_suffix, external_customer_id: f"""
+            WITH base AS (
+                SELECT
+                    kw.Criteria ,
+                    ag.AdGroupName,
+                    c.CampaignName,
+                    SUM(kws.Cost / 1e6) AS Cost,
+                    SUM(kws.Conversions) AS Conversions,
+                FROM {dataset}.KeywordStats_{table_suffix} kws
+                INNER JOIN {dataset}.Keyword_{table_suffix} kw
+                    ON kws.CriterionId = kw.CriterionId
+                    AND kws.AdGroupId = kw.AdGroupId
+                    AND kws.CampaignId = kw.CampaignId
+                    AND kws._DATA_DATE = kw._DATA_DATE
+                INNER JOIN {dataset}.AdGroup_{table_suffix} ag
+                    ON kws.AdGroupId = ag.AdGroupId
+                    AND kws.CampaignId = ag.CampaignId
+                    AND kws._DATA_DATE = ag._DATA_DATE
+                INNER JOIN {dataset}.Campaign_{table_suffix} c
+                    ON kws.CampaignId = c.CampaignId
+                    AND kws._DATA_DATE = c._DATA_DATE
+                WHERE
+                    kws._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)
+                    AND kws.ExternalCustomerId = {external_customer_id}
+                GROUP BY 1, 2, 3
+            ),
+            base2 AS (
+                SELECT
+                    Criteria,
+                    AdGroupName,
+                    CampaignName,
+                    Cost,
+                    Conversions,
+                    SAFE_DIVIDE(Cost, Conversions) AS cpa,
+                    (SELECT SAFE_DIVIDE(SUM(Cost), SUM(Conversions)) FROM base) AS avg_cpa
+                FROM base
+            )
+            SELECT 
+                ARRAY_AGG(Criteria || ' - ' || AdGroupName || ' - ' || CampaignName) AS values,
+                AVG(avg_cpa) AS avg
+            FROM base2 
+            WHERE SAFE_DIVIDE(cpa - avg_cpa, avg_cpa) > 0.3
         """
     )
 

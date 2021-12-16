@@ -18,35 +18,35 @@ underspent_budgets: IMetric = {
 
 clicks: IMetric = {
     "name": "Clicks",
-    "query": getter.metric_weekly("Clicks"),
+    "query": getter.metric_weekly_basic("Clicks"),
     "compose_body": composer.metric_weekly("Clicks"),
 }
 
 
 impressions: IMetric = {
     "name": "Impressions",
-    "query": getter.metric_weekly("Impressions"),
+    "query": getter.metric_weekly_basic("Impressions"),
     "compose_body": composer.metric_weekly("Impressions"),
 }
 
 
 conversions: IMetric = {
     "name": "Conversions",
-    "query": getter.metric_weekly("Conversions"),
+    "query": getter.metric_weekly_basic("Conversions"),
     "compose_body": composer.metric_weekly("Conversions"),
 }
 
 
 ctr: IMetric = {
     "name": "CTR",
-    "query": getter.metric_weekly("Ctr"),
+    "query": getter.metric_weekly_adv("Ctr"),
     "compose_body": composer.metric_weekly("CTR"),
 }
 
 
 cpc: IMetric = {
     "name": "CPC",
-    "query": getter.metric_weekly("AverageCpc"),
+    "query": getter.metric_weekly_adv("AverageCpc"),
     "compose_body": composer.metric_weekly("CPC"),
 }
 
@@ -102,13 +102,13 @@ ad_group_performance: IMetric = {
 
 ad_group_cpa: IMetric = {
     "name": "Ad Group CPA Alerts",
-    "query": getter.metric_cpa("AdGroupName"),
+    "query": getter.ad_group_cpa(),
     "compose_body": composer.metric_cpa("Ad Groups"),
 }
 
 
 keyword_cpa: IMetric = {
     "name": "Keyword CPA Alerts",
-    "query": getter.metric_cpa("Criteria"),
+    "query": getter.keyword_cpa(),
     "compose_body": composer.metric_cpa("Keywords"),
 }

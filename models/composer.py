@@ -4,7 +4,7 @@ MetricComposer = Callable[[dict], str]
 
 
 def format_scalar(number: Union[float, int]) -> str:
-    return f"{number:,}"
+    return f"{number:,.2f}"
 
 
 def format_percentage(number: Union[float, int]) -> str:
@@ -13,34 +13,40 @@ def format_percentage(number: Union[float, int]) -> str:
 
 def metric_daily(name: str) -> MetricComposer:
     def compose(data: dict) -> str:
-        d1 = (
-            f"<p>{name} were {format_percentage(data['d1'])} compared to the previous day</p>"
-            if data["d1"] < 0
-            else ""
-        )
-        d7_avg = (
-            f"<p>{name} were {format_percentage(data['d7_avg'])} compared to the previous 7 day average</p>"
-            if data["d7_avg"] < 0
-            else ""
-        )
-        return d1 + d7_avg
+        if not data["d1"] or not data["d7_avg"]:
+            return ""
+        else:
+            d1 = (
+                f"<p>{name} were {format_percentage(data['d1'])} compared to the previous day</p>"
+                if data["d1"] < 0
+                else ""
+            )
+            d7_avg = (
+                f"<p>{name} were {format_percentage(data['d7_avg'])} compared to the previous 7 day average</p>"
+                if data["d7_avg"] < 0
+                else ""
+            )
+            return d1 + d7_avg
 
     return compose
 
 
 def metric_weekly(name: str) -> MetricComposer:
     def compose(data: dict) -> str:
-        d7 = (
-            f"<p>{name} were {format_percentage(data['d7'])} compared to the previous week</p>"
-            if data["d7"] < 0
-            else ""
-        )
-        d30 = (
-            f"<p>{name} were {format_percentage(data['d30'])} compared to viewing MOM performance</p>"
-            if data["d30"] < 0
-            else ""
-        )
-        return d7 + d30
+        if data['dw'] and data['dmom']:
+            dw = (
+                f"<p>{name} were {format_percentage(data['dw'])} compared to the previous week</p>"
+                if data["dw"] < 0
+                else ""
+            )
+            dmom = (
+                f"<p>{name} were {format_percentage(data['dmom'])} compared to viewing MOM performance</p>"
+                if data["dmom"] < 0
+                else ""
+            )
+            return dw + dmom
+        else:
+            return ""
 
     return compose
 
@@ -92,11 +98,14 @@ def disapproved_ads(data: dict) -> str:
 
 def metric_cpa(field: str) -> MetricComposer:
     def compose(data: dict) -> str:
-        lines = [f"<li>{i}</li>" for i in data["values"]]
-        return f"""
-        <p>The following {field} have a CPA that is 50% or more higher than the account average:</p>
-        <ul>{''.join(lines)}</ul>
-        """
+        if data['avg'] and data['values']:
+            lines = [f"<li>{i}</li>" for i in data["values"]]
+            return f"""
+            <p>The following {field} have a CPA that is 30% or more higher than the account average of {format_scalar(data['avg'])}:</p>
+            <ul>{''.join(lines)}</ul>
+            """
+        else:
+            return ""
 
     return compose
 

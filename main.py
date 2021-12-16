@@ -1,18 +1,13 @@
-from google.cloud import bigquery, tasks_v2  # type: ignore
-
+from libs.emails import send_email
 from controllers.reports import report_factory, build_report
-from controllers.emails import send_email
 from controllers.tasks import create_tasks
 
 SENDER = "siddhantmehandru.developer@gmail.com"
 RECEIVERS = [
     "hieumdd@gmail.com",
-    "jhamb285@gmail.com",
-    "kevin@luux-media.com",
+    # "jhamb285@gmail.com",
+    # "kevin@luux-media.com",
 ]
-
-BQ_CLIENT = bigquery.Client()
-TASKS_CLIENT = tasks_v2.CloudTasksClient()
 DATASET = "GoogleAds"
 TABLE_SUFFIX = "3413321199"
 
@@ -23,7 +18,6 @@ def main(request) -> dict:
 
     if "external_customer_id" in data and "mode" in data:
         subject, report = build_report(
-            BQ_CLIENT,
             DATASET,
             TABLE_SUFFIX,
             data["external_customer_id"],
@@ -45,7 +39,7 @@ def main(request) -> dict:
             "emails_sent": emails_sent,
         }
     elif "tasks" in data:
-        response = create_tasks(BQ_CLIENT, TASKS_CLIENT, DATASET, TABLE_SUFFIX, data)
+        response = create_tasks(DATASET, TABLE_SUFFIX, data)
     else:
         raise ValueError(data)
 
