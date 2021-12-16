@@ -88,40 +88,12 @@ metric_weekly_adv = metric_weekly("AccountStats")
 def underspent_accounts(days: int) -> Getter:
     return (
         lambda dataset, table_suffix, external_customer_id: f"""
-            WITH base AS (
-                SELECT 
-                    SUM(bs.Cost) AS Cost,
-                    SUM(b.Amount) AS Amount,
-                FROM {dataset}.BudgetStats_{table_suffix} bs
-                INNER JOIN {dataset}.Budget_{table_suffix} b
-                    ON bs.BudgetId = b.BudgetId
-                    AND bs._DATA_DATE = b._DATA_DATE
-                WHERE
-                    bs._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
-                    AND bs.ExternalCustomerId = {external_customer_id}
-                    AND b._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
-                    AND b.ExternalCustomerId = {external_customer_id}
-                ),
-            base2 AS (
-                SELECT
-                    (Cost - Amount) / 100 AS underspent,
-                    (Cost - Amount) / Amount AS percentage
-                FROM base
-            )
-            SELECT * FROM base2 WHERE underspent IS NOT NULL
-        """
-    )
-
-
-def underspent_budgets(days: int) -> Getter:
-    return (
-        lambda dataset, table_suffix, external_customer_id: f"""
-            WITH base AS (
-                SELECT 
+        WITH base AS (SELECT 
+                    bs._DATA_DATE AS Date,
                     c.CampaignName,
                     b.BudgetName,
-                    SUM(bs.Cost) AS Cost,
-                    SUM(b.Amount) AS Amount,
+                    SUM(bs.Cost) / 1000000 AS Cost,
+                    AVG(b.Amount) / 1000000 AS Amount,
                 FROM {dataset}.BudgetStats_{table_suffix} bs
                 INNER JOIN {dataset}.Budget_{table_suffix} b
                     ON bs.BudgetId = b.BudgetId
@@ -130,27 +102,93 @@ def underspent_budgets(days: int) -> Getter:
                 WHERE
                     bs._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
                     AND bs.ExternalCustomerId = {external_customer_id}
-                    AND b._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
+                    AND b._DATA_DATE = b._LATEST_DATE
                     AND b.ExternalCustomerId = {external_customer_id}
-                    AND c._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
+                    AND c._DATA_DATE = c._LATEST_DATE
                     AND c.ExternalCustomerId = {external_customer_id}
-                GROUP BY 1, 2
+                GROUP BY 1, 2, 3
             ),
             base2 AS (
                 SELECT
+                    Date,
                     BudgetName,
                     ARRAY_AGG(CampaignName) AS Campaigns,
-                    (SUM(Cost) - AVG(Amount)) / AVG(Amount) AS underspent
+                    SUM(Cost) AS Cost,
+                    AVG(Amount) AS Amount,
                 FROM base
-                GROUP BY 1
-                HAVING SUM(Cost) < AVG(Amount)
+                GROUP BY 1, 2
             ),
             base3 AS (
                 SELECT
-                    ARRAY_AGG(STRUCT(BudgetName,Campaigns,underspent)) AS budgets
+                    BudgetName,
+                    ANY_VALUE(Campaigns) AS Campaigns,
+                    -- Date,
+                    SUM(Cost) AS Cost,
+                    SUM(Amount) AS Amount,
+                    (SUM(Cost) - AVG(Amount)) / AVG(Amount) AS underspent
                 FROM base2
+                GROUP BY 1
+                HAVING Cost < Amount
             )
-            SELECT * FROM base3 WHERE ARRAY_LENGTH(budgets) > 0
+            SELECT
+                SUM(Cost) - SUM(Amount) AS underspent,
+                SAFE_DIVIDE(SUM(Cost) - SUM(Amount), SUM(Amount)) AS percentage,
+            FROM base3
+        """
+    )
+
+
+def underspent_budgets(days: int) -> Getter:
+    return (
+        lambda dataset, table_suffix, external_customer_id: f"""
+            WITH base AS (SELECT 
+                    bs._DATA_DATE AS Date,
+                    c.CampaignName,
+                    b.BudgetName,
+                    SUM(bs.Cost) / 1000000 AS Cost,
+                    AVG(b.Amount) / 1000000 AS Amount,
+                FROM {dataset}.BudgetStats_{table_suffix} bs
+                INNER JOIN {dataset}.Budget_{table_suffix} b
+                    ON bs.BudgetId = b.BudgetId
+                INNER JOIN {dataset}.Campaign_{table_suffix} c
+                ON bs.AssociatedCampaignId = c.CampaignId
+                WHERE
+                    bs._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -{days} DAY)
+                    AND bs.ExternalCustomerId = {external_customer_id}
+                    AND b._DATA_DATE = b._LATEST_DATE
+                    AND b.ExternalCustomerId = {external_customer_id}
+                    AND c._DATA_DATE = c._LATEST_DATE
+                    AND c.ExternalCustomerId = {external_customer_id}
+                GROUP BY 1, 2, 3
+            ),
+            base2 AS (
+                SELECT
+                    Date,
+                    BudgetName,
+                    ARRAY_AGG(CampaignName) AS Campaigns,
+                    SUM(Cost) AS Cost,
+                    AVG(Amount) AS Amount,
+                FROM base
+                GROUP BY 1, 2
+            ),
+            base3 AS (
+                SELECT
+                    BudgetName,
+                    ANY_VALUE(Campaigns) AS Campaigns,
+                    -- Date,
+                    SUM(Cost),
+                    SUM(Amount),
+                    (SUM(Cost) - AVG(Amount)) / AVG(Amount) AS underspent
+                FROM base2
+                GROUP BY 1
+                HAVING SUM(Cost) < AVG(Amount)
+            ),
+            base4 AS (
+                SELECT
+                    ARRAY_AGG(STRUCT(BudgetName,Campaigns,underspent)) AS budgets
+                FROM base3
+            )
+            SELECT * FROM base4 WHERE ARRAY_LENGTH(budgets) > 0
         """
     )
 
