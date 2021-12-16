@@ -13,7 +13,11 @@ CLOUD_TASKS_PATH = (PROJECT_ID, "us-central1", "luux_media_emails")
 
 
 def create_tasks(dataset: str, table_suffix: str, tasks_data: dict) -> dict:
-    accounts = get_customers(dataset, table_suffix)
+    # accounts = get_customers(dataset, table_suffix)
+    accounts = [
+        "4749202596",
+        "7235067194"
+    ]
     payloads = [
         {
             "name": f"{account}-{uuid.uuid4()}",
