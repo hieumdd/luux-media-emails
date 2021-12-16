@@ -9,10 +9,10 @@ from libs.bigquery import get_customers
 
 TASKS_CLIENT = tasks_v2.CloudTasksClient()
 _, PROJECT_ID = auth.default()
-CLOUD_TASKS_PATH = (PROJECT_ID, "us-central1", "luux_media_emails")
+CLOUD_TASKS_PATH = (PROJECT_ID, "us-central1", "luux-media-emails")
 
 
-def create_tasks(dataset: str, table_suffix: str, tasks_data: dict) -> dict:
+def create_tasks(tasks_data: dict) -> dict:
     # accounts = get_customers(dataset, table_suffix)
     accounts = [
         "4749202596",

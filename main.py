@@ -4,16 +4,16 @@ from controllers.tasks import create_tasks
 
 SENDER = "siddhantmehandru.developer@gmail.com"
 RECEIVERS = [
-    "hieumdd@gmail.com",
-    # "jhamb285@gmail.com",
-    # "kevin@luux-media.com",
+    # "hieumdd@gmail.com",
+    "jhamb285@gmail.com",
+    "kevin@luux-media.com",
 ]
 DATASET = "GoogleAds"
 TABLE_SUFFIX = "3413321199"
 
 
 def main(request) -> dict:
-    data = request.get_json()
+    data: dict = request.get_json()
     print(data)
 
     if "external_customer_id" in data and "mode" in data:
@@ -39,7 +39,7 @@ def main(request) -> dict:
             "emails_sent": emails_sent,
         }
     elif "tasks" in data:
-        response = create_tasks(DATASET, TABLE_SUFFIX, data)
+        response = create_tasks(data)
     else:
         raise ValueError(data)
 
