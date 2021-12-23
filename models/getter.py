@@ -478,8 +478,8 @@ def metric_performance(field: str) -> Getter:
                     ARRAY_AGG(
                     STRUCT(
                         {field} AS key,
-                        (d0 - d7) / d7 AS d7,
-                        (d0 - d30) / d30 AS d30
+                        SAFE_DIVIDE((d0 - d7), d7) AS d7,
+                        SAFE_DIVIDE((d0 - d30), d30) AS d30
                     )
                 ) AS value
                 FROM base4

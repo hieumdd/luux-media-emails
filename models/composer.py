@@ -33,7 +33,7 @@ def metric_daily(name: str) -> MetricComposer:
 
 def metric_weekly(name: str) -> MetricComposer:
     def compose(data: dict) -> str:
-        if data['dw'] and data['dmom']:
+        if data["dw"] and data["dmom"]:
             dw = (
                 f"<p>{name} were {format_percentage(data['dw'])} compared to the previous week</p>"
                 if data["dw"] < 0
@@ -98,7 +98,7 @@ def disapproved_ads(data: dict) -> str:
 
 def metric_cpa(field: str) -> MetricComposer:
     def compose(data: dict) -> str:
-        if data['avg'] and data['values']:
+        if data["avg"] and data["values"]:
             lines = [f"<li>{i}</li>" for i in data["values"]]
             return f"""
             <p>The following {field} have a CPA that is 30% or more higher than the account average of {format_scalar(data['avg'])}:</p>
@@ -112,8 +112,16 @@ def metric_cpa(field: str) -> MetricComposer:
 
 def metric_performance(field: str) -> MetricComposer:
     def compose(data: dict) -> str:
-        week_lines = [f"<li>{i['key']}</li>" for i in data["value"] if i["d7"] < 0]
-        month_lines = [f"<li>{i['key']}</li>" for i in data["value"] if i["d30"] < 0]
+        week_lines = [
+            f"<li>{i['key']}</li>"
+            for i in data["value"]
+            if i["d7"] is not None and i["d7"] < 0
+        ]
+        month_lines = [
+            f"<li>{i['key']}</li>"
+            for i in data["value"]
+            if i["d30"] is not None and i["d30"] < 0
+        ]
         return f"""
         <p>Performance on the following {field} has reduced WOW:</p>
         <ul>{''.join(week_lines)}</ul>
