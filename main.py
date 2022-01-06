@@ -39,7 +39,7 @@ def main(request) -> dict:
             "emails_sent": emails_sent,
         }
     elif "tasks" in data:
-        response = create_tasks(data)
+        response = create_tasks(data, DATASET, TABLE_SUFFIX)
     else:
         raise ValueError(data)
 
