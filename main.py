@@ -21,6 +21,7 @@ def main(request) -> dict:
             DATASET,
             TABLE_SUFFIX,
             data["external_customer_id"],
+            data["account_name"],
             report_factory(data["mode"]),
         )
         emails_sent = (

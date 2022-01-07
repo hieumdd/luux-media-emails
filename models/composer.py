@@ -52,9 +52,12 @@ def metric_weekly(name: str) -> MetricComposer:
 
 
 def underspent_accounts(data: dict) -> str:
-    return f"""
-    <p>The account underspent by {format_percentage(data['percentage'])} ({format_scalar(data['underspent'])})
-    """
+    if data["percentage"] and data["underspent"]:
+        return f"""
+        <p>The account underspent by {format_percentage(data['percentage'])} ({format_scalar(data['underspent'])})
+        """
+    else:
+        return ""
 
 
 def underspent_budgets(data: dict) -> str:

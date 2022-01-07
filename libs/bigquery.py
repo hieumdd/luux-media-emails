@@ -5,12 +5,23 @@ from models.metrics.base import IMetric
 BQ_CLIENT = bigquery.Client()
 
 
-def get_customers(dataset: str, table_suffix: str) -> list[str]:
+def get_customers(dataset: str, table_suffix: str) -> list[dict[str, str]]:
     results = BQ_CLIENT.query(
-        f"SELECT DISTINCT ExternalCustomerId FROM {dataset}.AccountStats_{table_suffix}"
+        f"""SELECT
+            ExternalCustomerId,
+            AccountDescriptiveName,
+            FROM {dataset}.Customer_{table_suffix}
+            WHERE _DATA_DATE = _LATEST_DATE
+        """
     ).result()
     rows = [dict(row.items()) for row in results]
-    return [str(i["ExternalCustomerId"]) for i in rows]
+    return [
+        {
+            "ExternalCustomerId": str(i["ExternalCustomerId"]),
+            "AccountDescriptiveName": i["AccountDescriptiveName"],
+        }
+        for i in rows
+    ]
 
 
 def get_metric(
