@@ -26,10 +26,11 @@ def build_report(
     dataset: str,
     table_suffix: str,
     external_customer_id: str,
+    account_name: str,
     report: IReport,
 ) -> tuple[str, Optional[str]]:
-    subject = f"Potential Issues With {external_customer_id} on Google"
-    prelude = f"<p>Please see the below potential issues when carrying out {report['mode'].lower()} checks for {external_customer_id}</p>"
+    subject = f"Potential Issues With {account_name} on Google"
+    prelude = f"<p>Please see the below potential issues when carrying out {report['mode'].lower()} checks for {account_name} - {external_customer_id}</p>"
     jobs = [
         get_metric(dataset, table_suffix, external_customer_id, i)
         for i in report["metrics"]
@@ -42,12 +43,12 @@ def build_report(
         else None
         for job in [i.result() for i in jobs]
     ]
-    body = [
+    body = ''.join([
         compose(metric, result)
         for metric, result in zip(report["metrics"], jobs_results)
         if result
-    ]
+    ])
     return (
         subject,
-        f"<html><body>{prelude}{''.join(body)}</body></html>" if body else None,
+        f"<html><body>{prelude}{body}</body></html>" if body else None,
     )

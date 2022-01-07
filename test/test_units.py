@@ -18,15 +18,17 @@ def run(data: dict) -> dict:
 @pytest.mark.parametrize(
     "account",
     get_customers(DATASET, TABLE_SUFFIX),
+    ids=[i["AccountDescriptiveName"] for i in get_customers(DATASET, TABLE_SUFFIX)],
 )
 @pytest.mark.parametrize(
     "mode",
     MODE,
 )
-def test_emails(account: str, mode: str):
+def test_emails(account: dict[str, str], mode: str):
     res = run(
         {
-            "external_customer_id": account,
+            "external_customer_id": account["ExternalCustomerId"],
+            "account_name": account["AccountDescriptiveName"],
             "mode": mode,
         }
     )
