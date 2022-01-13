@@ -34,7 +34,7 @@ conversions: IMetric = {
 
 ctr: IMetric = {
     "name": "CTR",
-    "query": getter.metric_daily_adv("Ctr"),
+    "query": getter.metric_daily_adv("Ctr", "AVG"),
     "compose_body": composer.metric_daily("CTR"),
 }
 
