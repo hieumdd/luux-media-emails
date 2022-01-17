@@ -16,25 +16,25 @@ underspent_budgets: IMetric = {
 
 clicks: IMetric = {
     "name": "Clicks",
-    "query": getter.metric_daily_basic("Clicks"),
+    "query": getter.metric_daily_sum("Clicks"),
     "compose_body": composer.metric_daily("Clicks"),
 }
 
 impressions: IMetric = {
     "name": "Impressions",
-    "query": getter.metric_daily_basic("Impressions"),
+    "query": getter.metric_daily_sum("Impressions"),
     "compose_body": composer.metric_daily("Impressions"),
 }
 
 conversions: IMetric = {
     "name": "Conversions",
-    "query": getter.metric_daily_basic("Conversions"),
+    "query": getter.metric_daily_sum("Conversions"),
     "compose_body": composer.metric_daily("Conversions"),
 }
 
 ctr: IMetric = {
     "name": "CTR",
-    "query": getter.metric_daily_adv("Ctr", "AVG"),
+    "query": getter.metric_daily_div("Clicks", "Impressions"),
     "compose_body": composer.metric_daily("CTR"),
 }
 
