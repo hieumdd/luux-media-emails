@@ -4,86 +4,166 @@ Getter = Callable[[str, str, str], str]
 Callable[[str], Callable[[str, str, str], str]]
 Callable[[str], Callable[[str], Callable[[str, str, str], str]]]
 
-def metric_daily(table: str):
-    def query(field: str, agg: str = "SUM") -> Getter:
-        return (
-            lambda dataset, table_suffix, external_customer_id: f"""
-                WITH base AS (
-                    SELECT Date, {agg}({field}) AS d0
-                    FROM {dataset}.{table}_{table_suffix}
-                    WHERE
-                        _DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -8 DAY)
-                        AND ExternalCustomerId = {external_customer_id}
+
+def metric_daily_sum(field: str) -> Getter:
+    return (
+        lambda dataset, table_suffix, external_customer_id: f"""
+            WITH base AS (
+                SELECT Date, SUM({field}) AS d0
+                FROM {dataset}.AccountBasicStats_{table_suffix}
+                WHERE
+                    _DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -8 DAY)
+                    AND ExternalCustomerId = {external_customer_id}
                 GROUP BY 1
-                ),
-                base2 AS (
-                    SELECT
-                        Date, d0,
-                        LEAD(d0) OVER (ORDER BY Date DESC) AS d1,
-                        (
-                            SELECT AVG(d0) FROM base
-                            WHERE Date <> DATE_ADD(CURRENT_DATE(), INTERVAL -1 DAY)
-                        ) AS d7_avg
-                    FROM base
-                ),
-                base3 AS (
+            ),
+            base2 AS (
+                SELECT
+                    Date, d0,
+                    LEAD(d0) OVER (ORDER BY Date DESC) AS d1,
+                    (
+                        SELECT AVG(d0) FROM base
+                        WHERE Date <> DATE_ADD(CURRENT_DATE(), INTERVAL -1 DAY)
+                    ) AS d7_avg
+                FROM base
+            ),
+            base3 AS (
                 SELECT
                     SAFE_DIVIDE(d0-d1,d1) as d1,
                     SAFE_DIVIDE(d0-d7_avg,d7_avg) as d7_avg
                 FROM base2
                 WHERE Date = DATE_ADD(CURRENT_DATE(), INTERVAL -1 DAY)
-                )
-                SELECT * FROM base3
-                """
-        )
-
-    return query
+            )
+            SELECT * FROM base3
+            """
+    )
 
 
-metric_daily_basic = metric_daily("AccountBasicStats")
-metric_daily_adv = metric_daily("AccountStats")
-
-
-def metric_weekly(table: str):
-    def query(field: str, agg: str = "SUM") -> Getter:
-        return (
-            lambda dataset, table_suffix, external_customer_id: f"""
+def metric_daily_div(nume: str, denom: str) -> Getter:
+    return (
+        lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
                 SELECT
-                    _DATA_DATE AS Date,
-                    DATE_TRUNC(Date, Day) AS Month,
-                    EXTRACT(DAY FROM _DATA_DATE) AS Day,
-                    {agg}({field}) AS d0,
-                FROM {dataset}.{table}_{table_suffix}
-                WHERE ExternalCustomerId = {external_customer_id}
-                GROUP BY 1, 2
+                    Date,
+                    SUM({nume}) AS nume0,
+                    SUM(NULLIF({denom}, 0)) AS denom0,
+                FROM {dataset}.AccountBasicStats_{table_suffix}
+                WHERE
+                    _DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -8 DAY)
+                    AND ExternalCustomerId = {external_customer_id}
+                GROUP BY 1
             ),
             base2 AS (
                 SELECT
                     Date,
-                    Month,
-                    d0,
-                    LEAD(d0, 7) OVER (ORDER BY Date DESC) AS d7,
-                    LEAD(d0, 1) OVER (PARTITION BY Day ORDER BY Month DESC) AS d_mom,
+                    nume0,
+                    denom0,
+                    LEAD(nume0) OVER (ORDER BY Date DESC) AS nume1,
+                    LEAD(denom0) OVER (ORDER BY Date DESC) AS denom1,
+                    (
+                        SELECT SUM(nume0) FROM base
+                        WHERE Date <> DATE_ADD(CURRENT_DATE(), INTERVAL -1 DAY)
+                    ) AS nume7,
+                    (
+                        SELECT SUM(denom0) FROM base
+                        WHERE Date <> DATE_ADD(CURRENT_DATE(), INTERVAL -1 DAY)
+                    ) AS denom7,
                 FROM base
             ),
             base3 AS (
                 SELECT
-                    (SELECT {agg}(d0) FROM base2 WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)) AS d7,
-                    (SELECT {agg}(d7) FROM base2 WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)) AS d14,
-                    (SELECT {agg}(d0) FROM base2 WHERE Date >= DATE_TRUNC(CURRENT_DATE(), MONTH)) AS dtm,
-                    (SELECT {agg}(d_mom) FROM base2 WHERE Date >= DATE_TRUNC(CURRENT_DATE(), MONTH)) AS dlm,
+                    SAFE_DIVIDE(
+                        (SUM(nume0) / SUM(NULLIF(denom0, 0))) - (SUM(nume1) / SUM(NULLIF(denom1, 0))),
+                        (SUM(nume1) / SUM(NULLIF(denom1, 0)))
+                    ) as d1,
+                    SAFE_DIVIDE(
+                        (SUM(nume0) / SUM(NULLIF(denom0, 0))) - (SUM(nume7) / SUM(NULLIF(denom7, 0))),
+                        (SUM(nume7) / SUM(NULLIF(denom7, 0)))
+                    ) as d7_avg
+                FROM base2
+                WHERE Date = DATE_ADD(CURRENT_DATE(), INTERVAL -1 DAY)
             )
-            SELECT
-                SAFE_DIVIDE(d7-d14,d14) AS dw,
-                SAFE_DIVIDE(dtm-dlm, dlm) AS dmom,
-            FROM base3
+            SELECT * FROM base3
             """
-        )
-    return query
+    )
 
-metric_weekly_basic = metric_weekly("AccountBasicStats")
-metric_weekly_adv = metric_weekly("AccountStats")
+
+def metric_weekly_sum(field: str) -> Getter:
+    return (
+        lambda dataset, table_suffix, external_customer_id: f"""
+        WITH base AS (
+            SELECT
+                _DATA_DATE AS Date,
+                DATE_TRUNC(Date, Month) AS Month,
+                EXTRACT(DAY FROM _DATA_DATE) AS Day,
+                SUM({field}) AS d0,
+            FROM {dataset}.AccountBasicStats_{table_suffix}
+            WHERE ExternalCustomerId = {external_customer_id}
+            GROUP BY 1, 2
+        ),
+        base2 AS (
+            SELECT
+                Date,
+                Month,
+                d0,
+                LEAD(d0, 7) OVER (ORDER BY Date DESC) AS d7,
+                LEAD(d0, 1) OVER (PARTITION BY Day ORDER BY Month DESC) AS d_mom,
+            FROM base
+        ),
+        base3 AS (
+            SELECT
+                (SELECT SUM(d0) FROM base2 WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)) AS d7,
+                (SELECT SUM(d7) FROM base2 WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)) AS d14,
+                (SELECT SUM(d0) FROM base2 WHERE Date >= DATE_TRUNC(CURRENT_DATE(), MONTH)) AS dtm,
+                (SELECT SUM(d_mom) FROM base2 WHERE Date >= DATE_TRUNC(CURRENT_DATE(), MONTH)) AS dlm,
+        )
+        SELECT
+            SAFE_DIVIDE(d7-d14,d14) AS dw,
+            SAFE_DIVIDE(dtm-dlm, dlm) AS dmom,
+        FROM base3
+        """
+    )
+
+
+def metric_weekly_div(nume: str, denom: str) -> Getter:
+    return (
+        lambda dataset, table_suffix, external_customer_id: f"""
+        WITH base AS (
+            SELECT
+                _DATA_DATE AS Date,
+                DATE_TRUNC(Date, Month) AS Month,
+                EXTRACT(DAY FROM _DATA_DATE) AS Day,
+                SUM({nume}) AS nume0,
+                SUM(NULLIF({denom}, 0)) AS denom0,
+            FROM {dataset}.AccountBasicStats_{table_suffix}
+            WHERE ExternalCustomerId = {external_customer_id}
+            GROUP BY 1, 2
+        ),
+        base2 AS (
+            SELECT
+                Date,
+                Month,
+                nume0,
+                denom0,
+                LEAD(nume0, 7) OVER (ORDER BY Date DESC) AS nume7,
+                LEAD(denom0, 7) OVER (ORDER BY Date DESC) AS denom7,
+                LEAD(nume0, 1) OVER (PARTITION BY Day ORDER BY Month DESC) AS nume_mom,
+                LEAD(denom0, 1) OVER (PARTITION BY Day ORDER BY Month DESC) AS denom_mom,
+            FROM base
+        ),
+        base3 AS (
+            SELECT
+                (SELECT SUM(nume0) / SUM(NULLIF(denom0, 0)) FROM base2 WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)) AS d7,
+                (SELECT SUM(nume7) / SUM(NULLIF(denom7, 0)) FROM base2 WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)) AS d14,
+                (SELECT SUM(nume0) / SUM(NULLIF(denom0, 0)) FROM base2 WHERE Date >= DATE_TRUNC(CURRENT_DATE(), MONTH)) AS dtm,
+                (SELECT SUM(nume_mom) / SUM(NULLIF(denom_mom, 0)) FROM base2 WHERE Date >= DATE_TRUNC(CURRENT_DATE(), MONTH)) AS dlm,
+        )
+        SELECT
+            SAFE_DIVIDE(d7-d14,d14) AS dw,
+            SAFE_DIVIDE(dtm-dlm, dlm) AS dmom,
+        FROM base3
+        """
+    )
+
 
 def underspent_accounts(days: int) -> Getter:
     return (

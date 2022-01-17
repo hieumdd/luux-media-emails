@@ -38,16 +38,16 @@ def build_report(
     poll(jobs)
     jobs_results = [i.result() for i in jobs]
     jobs_results = [
-        [dict(row.items()) for row in job][0]
-        if job.total_rows == 1
-        else None
+        [dict(row.items()) for row in job][0] if job.total_rows == 1 else None
         for job in [i.result() for i in jobs]
     ]
-    body = ''.join([
-        compose(metric, result)
-        for metric, result in zip(report["metrics"], jobs_results)
-        if result
-    ])
+    body = "".join(
+        [
+            compose(metric, result)
+            for metric, result in zip(report["metrics"], jobs_results)
+            if result
+        ]
+    )
     return (
         subject,
         f"<html><body>{prelude}{body}</body></html>" if body else None,
