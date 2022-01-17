@@ -39,14 +39,14 @@ conversions: IMetric = {
 
 ctr: IMetric = {
     "name": "CTR",
-    "query": getter.metric_weekly_adv("Ctr"),
+    "query": getter.metric_weekly_adv("Ctr", "AVG"),
     "compose_body": composer.metric_weekly("CTR"),
 }
 
 
 cpc: IMetric = {
     "name": "CPC",
-    "query": getter.metric_weekly_adv("AverageCpc"),
+    "query": getter.metric_weekly_adv("AverageCpc", "AVG"),
     "compose_body": composer.metric_weekly("CPC"),
 }
 

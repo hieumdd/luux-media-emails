@@ -5,11 +5,11 @@ Callable[[str], Callable[[str, str, str], str]]
 Callable[[str], Callable[[str], Callable[[str, str, str], str]]]
 
 def metric_daily(table: str):
-    def query(field: str) -> Getter:
+    def query(field: str, agg: str = "SUM") -> Getter:
         return (
             lambda dataset, table_suffix, external_customer_id: f"""
                 WITH base AS (
-                    SELECT Date, SUM({field}) AS d0
+                    SELECT Date, {agg}({field}) AS d0
                     FROM {dataset}.{table}_{table_suffix}
                     WHERE
                         _DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -8 DAY)
@@ -45,7 +45,7 @@ metric_daily_adv = metric_daily("AccountStats")
 
 
 def metric_weekly(table: str):
-    def query(field: str) -> Getter:
+    def query(field: str, agg: str = "SUM") -> Getter:
         return (
             lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
@@ -53,7 +53,7 @@ def metric_weekly(table: str):
                     _DATA_DATE AS Date,
                     DATE_TRUNC(Date, Day) AS Month,
                     EXTRACT(DAY FROM _DATA_DATE) AS Day,
-                    SUM({field}) AS d0,
+                    {agg}({field}) AS d0,
                 FROM {dataset}.{table}_{table_suffix}
                 WHERE ExternalCustomerId = {external_customer_id}
                 GROUP BY 1, 2
@@ -69,10 +69,10 @@ def metric_weekly(table: str):
             ),
             base3 AS (
                 SELECT
-                    (SELECT SUM(d0) FROM base2 WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)) AS d7,
-                    (SELECT SUM(d7) FROM base2 WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)) AS d14,
-                    (SELECT SUM(d0) FROM base2 WHERE Date >= DATE_TRUNC(CURRENT_DATE(), MONTH)) AS dtm,
-                    (SELECT SUM(d_mom) FROM base2 WHERE Date >= DATE_TRUNC(CURRENT_DATE(), MONTH)) AS dlm,
+                    (SELECT {agg}(d0) FROM base2 WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)) AS d7,
+                    (SELECT {agg}(d7) FROM base2 WHERE Date >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)) AS d14,
+                    (SELECT {agg}(d0) FROM base2 WHERE Date >= DATE_TRUNC(CURRENT_DATE(), MONTH)) AS dtm,
+                    (SELECT {agg}(d_mom) FROM base2 WHERE Date >= DATE_TRUNC(CURRENT_DATE(), MONTH)) AS dlm,
             )
             SELECT
                 SAFE_DIVIDE(d7-d14,d14) AS dw,
