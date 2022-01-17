@@ -6,7 +6,7 @@ SENDER = "siddhantmehandru.developer@gmail.com"
 RECEIVERS = [
     "hieumdd@gmail.com",
     "jhamb285@gmail.com",
-    # "kevin@luux-media.com",
+    "kevin@luux-media.com",
 ]
 DATASET = "GoogleAds"
 TABLE_SUFFIX = "3413321199"
