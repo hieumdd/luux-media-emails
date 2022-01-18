@@ -1,19 +1,35 @@
 from typing import Callable
 
 Getter = Callable[[str, str, str], str]
-Callable[[str], Callable[[str, str, str], str]]
-Callable[[str], Callable[[str], Callable[[str, str, str], str]]]
 
 
 def metric_daily_sum(field: str) -> Getter:
     return (
         lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
-                SELECT Date, SUM({field}) AS d0
-                FROM {dataset}.AccountBasicStats_{table_suffix}
+                SELECT
+                    RawDate AS Date,
+                    SUM({field}) AS d0,
+                FROM (
+                    SELECT * FROM (
+                        SELECT * FROM
+                        UNNEST(
+                            GENERATE_DATE_ARRAY(
+                                DATE_ADD(CURRENT_DATE(), INTERVAL -90 DAY),
+                                CURRENT_DATE(),
+                                INTERVAL 1 DAY
+                            )
+                        ) AS RawDate
+                    ) _cal
+                    LEFT JOIN (
+                        SELECT * FROM
+                        {dataset}.AccountBasicStats_{table_suffix}
+                        WHERE ExternalCustomerId = {external_customer_id}
+                    ) b
+                    ON _cal.RawDate = b._DATA_DATE
+                )
                 WHERE
                     _DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -8 DAY)
-                    AND ExternalCustomerId = {external_customer_id}
                 GROUP BY 1
             ),
             base2 AS (
@@ -43,10 +59,27 @@ def metric_daily_div(nume: str, denom: str) -> Getter:
         lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
                 SELECT
-                    Date,
+                    RawDate AS Date,
                     SUM({nume}) AS nume0,
                     SUM(NULLIF({denom}, 0)) AS denom0,
-                FROM {dataset}.AccountBasicStats_{table_suffix}
+                FROM (
+                    SELECT * FROM (
+                        SELECT * FROM
+                        UNNEST(
+                            GENERATE_DATE_ARRAY(
+                                DATE_ADD(CURRENT_DATE(), INTERVAL -90 DAY),
+                                CURRENT_DATE(),
+                                INTERVAL 1 DAY
+                            )
+                        ) AS RawDate
+                    ) _cal
+                    LEFT JOIN (
+                        SELECT * FROM
+                        {dataset}.AccountBasicStats_{table_suffix}
+                        WHERE ExternalCustomerId = {external_customer_id}
+                    ) b
+                    ON _cal.RawDate = b._DATA_DATE
+                )
                 WHERE
                     _DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -8 DAY)
                     AND ExternalCustomerId = {external_customer_id}
@@ -92,12 +125,28 @@ def metric_weekly_sum(field: str) -> Getter:
         lambda dataset, table_suffix, external_customer_id: f"""
         WITH base AS (
             SELECT
-                _DATA_DATE AS Date,
-                DATE_TRUNC(Date, Month) AS Month,
-                EXTRACT(DAY FROM _DATA_DATE) AS Day,
+                RawDate AS Date,
+                DATE_TRUNC(RawDate, Month) AS Month,
+                EXTRACT(DAY FROM RawDate) AS Day,
                 SUM({field}) AS d0,
-            FROM {dataset}.AccountBasicStats_{table_suffix}
-            WHERE ExternalCustomerId = {external_customer_id}
+            FROM (
+                SELECT * FROM (
+                    SELECT * FROM
+                    UNNEST(
+                        GENERATE_DATE_ARRAY(
+                            DATE_ADD(CURRENT_DATE(), INTERVAL -90 DAY),
+                            CURRENT_DATE(),
+                            INTERVAL 1 DAY
+                        )
+                    ) AS RawDate
+                ) _cal
+                LEFT JOIN (
+                    SELECT * FROM
+                    {dataset}.AccountBasicStats_{table_suffix}
+                    WHERE ExternalCustomerId = {external_customer_id}
+                ) b
+                ON _cal.RawDate = b._DATA_DATE
+            )
             GROUP BY 1, 2
         ),
         base2 AS (
@@ -134,7 +183,24 @@ def metric_weekly_div(nume: str, denom: str) -> Getter:
                 EXTRACT(DAY FROM _DATA_DATE) AS Day,
                 SUM({nume}) AS nume0,
                 SUM(NULLIF({denom}, 0)) AS denom0,
-            FROM {dataset}.AccountBasicStats_{table_suffix}
+            FROM (
+                SELECT * FROM (
+                    SELECT * FROM
+                    UNNEST(
+                        GENERATE_DATE_ARRAY(
+                            DATE_ADD(CURRENT_DATE(), INTERVAL -90 DAY),
+                            CURRENT_DATE(),
+                            INTERVAL 1 DAY
+                        )
+                    ) AS RawDate
+                ) _cal
+                LEFT JOIN (
+                    SELECT * FROM
+                    {dataset}.AccountBasicStats_{table_suffix}
+                    WHERE ExternalCustomerId = {external_customer_id}
+                ) b
+                ON _cal.RawDate = b._DATA_DATE
+            )
             WHERE ExternalCustomerId = {external_customer_id}
             GROUP BY 1, 2
         ),
@@ -202,7 +268,6 @@ def underspent_accounts(days: int) -> Getter:
                 SELECT
                     BudgetName,
                     ANY_VALUE(Campaigns) AS Campaigns,
-                    -- Date,
                     SUM(Cost) AS Cost,
                     SUM(Amount) AS Amount,
                     (SUM(Cost) - AVG(Amount)) / AVG(Amount) AS underspent
