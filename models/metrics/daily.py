@@ -38,11 +38,11 @@ ctr: IMetric = {
     "compose_body": composer.metric_daily("CTR"),
 }
 
-gdn_placements: IMetric = {
-    "name": "GDN Placements",
-    "query": getter.gdn_placements(1),
-    "compose_body": composer.gdn_placements,
-}
+# gdn_placements: IMetric = {
+#     "name": "GDN Placements",
+#     "query": getter.gdn_placements(1),
+#     "compose_body": composer.gdn_placements,
+# }
 
 potential_negative_search_terms: IMetric = {
     "name": "Potential Negative Search Terms",
