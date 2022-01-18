@@ -140,12 +140,12 @@ def metric_weekly_sum(field: str) -> Getter:
                         )
                     ) AS RawDate
                 ) _cal
-            LEFT JOIN (
-                SELECT * FROM
-                {dataset}.AccountBasicStats_{table_suffix}
-                WHERE ExternalCustomerId = {external_customer_id}
-            ) b
-            ON _cal.RawDate = b._DATA_DATE
+                LEFT JOIN (
+                    SELECT * FROM
+                    {dataset}.AccountBasicStats_{table_suffix}
+                    WHERE ExternalCustomerId = {external_customer_id}
+                ) b
+                ON _cal.RawDate = b._DATA_DATE
             )
             GROUP BY 1, 2
         ),
@@ -194,12 +194,12 @@ def metric_weekly_div(nume: str, denom: str) -> Getter:
                         )
                     ) AS RawDate
                 ) _cal
-            LEFT JOIN (
-                SELECT * FROM
-                {dataset}.AccountBasicStats_{table_suffix}
-                WHERE ExternalCustomerId = {external_customer_id}
-            ) b
-            ON _cal.RawDate = b._DATA_DATE
+                LEFT JOIN (
+                    SELECT * FROM
+                    {dataset}.AccountBasicStats_{table_suffix}
+                    WHERE ExternalCustomerId = {external_customer_id}
+                ) b
+                ON _cal.RawDate = b._DATA_DATE
             )
             WHERE ExternalCustomerId = {external_customer_id}
             GROUP BY 1, 2
