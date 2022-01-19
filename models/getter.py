@@ -536,10 +536,10 @@ def ad_group_cpa() -> Getter:
                 INNER JOIN {dataset}.AdGroup_{table_suffix} ag
                     ON ags.AdGroupId = ag.AdGroupId
                     AND ags.CampaignId = ag.CampaignId
-                    AND ags._DATA_DATE = ag._DATA_DATE
+                    AND ag._DATA_DATE = ag._LATEST_DATE
                 INNER JOIN {dataset}.Campaign_{table_suffix} c
                     ON ags.CampaignId = c.CampaignId
-                    AND ags._DATA_DATE = c._DATA_DATE
+                    AND c._DATA_DATE = c.LATEST_DATE
                 WHERE
                     ags._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)
                     AND ags._DATE_DATE <> CURRENT_DATE()
@@ -580,14 +580,14 @@ def keyword_cpa() -> Getter:
                     ON kws.CriterionId = kw.CriterionId
                     AND kws.AdGroupId = kw.AdGroupId
                     AND kws.CampaignId = kw.CampaignId
-                    AND kws._DATA_DATE = kw._DATA_DATE
+                    AND kw._DATA_DATE = kw._LATEST_DATE
                 INNER JOIN {dataset}.AdGroup_{table_suffix} ag
                     ON kws.AdGroupId = ag.AdGroupId
                     AND kws.CampaignId = ag.CampaignId
-                    AND kws._DATA_DATE = ag._DATA_DATE
+                    AND ag._DATA_DATE = ag._LATEST_DATE
                 INNER JOIN {dataset}.Campaign_{table_suffix} c
                     ON kws.CampaignId = c.CampaignId
-                    AND kws._DATA_DATE = c._DATA_DATE
+                    AND c._DATA_DATE = c._LATEST_DATE
                 WHERE
                     kws._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)
                     AND kws._DATE_DATE <> CURRENT_DATE()
@@ -627,10 +627,10 @@ def metric_performance(field: str) -> Getter:
                 INNER JOIN {dataset}.AdGroup_{table_suffix} ag
                     ON ags.CampaignId = ag.CampaignId
                     AND ags.AdGroupId = ag.AdGroupId
-                    AND ags._DATA_DATE = ag._DATA_DATE
+                    AND ag._DATA_DATE = ag._LATEST_DATE
                 INNER JOIN {dataset}.Campaign_{table_suffix} c
                     ON ags.CampaignId = c.CampaignId
-                    AND ags._DATA_DATE = c._DATA_DATE
+                    AND c._DATA_DATE = c._LATEST_DATE
                 WHERE ags.ExternalCustomerId = {external_customer_id}
                 GROUP BY 1, 2, 3
             ),
