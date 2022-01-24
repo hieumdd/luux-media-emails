@@ -19,7 +19,6 @@ report_daily: IReport = {
         daily.conversions,
         daily.ctr,
         daily.potential_negative_search_terms,
-        # daily.disapproved_ads, # Removed
     ],
 }
 
@@ -40,6 +39,5 @@ report_weekly: IReport = {
         weekly.ad_group_performance,
         weekly.ad_group_cpa,
         weekly.keyword_cpa,
-        # weekly.disapproved_ads, # Removed
     ],
 }
