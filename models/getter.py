@@ -37,11 +37,12 @@ def metric_daily_sum(field: str) -> Getter:
                 SELECT
                     Date, d0,
                     LEAD(d0) OVER (ORDER BY Date DESC) AS d1,
-                    (
-                        SELECT AVG(d0) FROM base
-                        WHERE Date <> DATE_ADD(CURRENT_DATE(), INTERVAL -1 DAY)
-                    ) AS d7_avg
+                    _avg.d7_avg,
                 FROM base
+                CROSS JOIN (
+                        SELECT AVG(d0) as d7_avg FROM base
+                        WHERE Date <> DATE_ADD(CURRENT_DATE(), INTERVAL -1 DAY)
+                    ) AS _avg
             ),
             base3 AS (
                 SELECT
@@ -84,7 +85,6 @@ def metric_daily_div(nume: str, denom: str) -> Getter:
                 WHERE
                     RawDate >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)
                     AND RawDate <> CURRENT_DATE()
-                    AND ExternalCustomerId = {external_customer_id}
                 GROUP BY 1
             ),
             base2 AS (
@@ -94,15 +94,16 @@ def metric_daily_div(nume: str, denom: str) -> Getter:
                     denom0,
                     LEAD(nume0) OVER (ORDER BY Date DESC) AS nume1,
                     LEAD(denom0) OVER (ORDER BY Date DESC) AS denom1,
-                    (
-                        SELECT SUM(nume0) FROM base
-                        WHERE Date <> DATE_ADD(CURRENT_DATE(), INTERVAL -1 DAY)
-                    ) AS nume7,
-                    (
-                        SELECT SUM(denom0) FROM base
-                        WHERE Date <> DATE_ADD(CURRENT_DATE(), INTERVAL -1 DAY)
-                    ) AS denom7,
+                    _avg.nume7,
+                    _avg.denom7,
                 FROM base
+                CROSS JOIN (
+                    SELECT
+                        SUM(nume0) AS nume7,
+                        SUM(denom0) AS denom7,
+                    FROM base
+                    WHERE Date <> DATE_ADD(CURRENT_DATE(), INTERVAL -1 DAY)
+                ) AS _avg
             ),
             base3 AS (
                 SELECT
@@ -175,7 +176,8 @@ def metric_weekly_sum(field: str) -> Getter:
                 (
                     SELECT SUM(d0) FROM base2
                     WHERE Date >= DATE_TRUNC(CURRENT_DATE(), MONTH)
-                    AND Date <> CURRENT_DATE()) AS dtm,
+                    AND Date <> CURRENT_DATE()
+                ) AS dtm,
                 (
                     SELECT SUM(d_mom) FROM base2
                     WHERE Date >= DATE_TRUNC(CURRENT_DATE(), MONTH)
@@ -422,11 +424,28 @@ def metric_sis() -> Getter:
         lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
                 SELECT
-                    _DATA_DATE AS Date,
+                    RawDate AS Date,
                     Month,
-                    EXTRACT(DAY FROM _DATA_DATE) AS Day, 
+                    EXTRACT(DAY FROM RawDate) AS Day, 
                     AVG(SAFE_CAST(REPLACE(SearchImpressionShare, '%', '') AS NUMERIC)) AS d0,
-                FROM {dataset}.AccountNonClickStats_{table_suffix}
+                FROM (
+                    SELECT * FROM (
+                        SELECT * FROM
+                        UNNEST(
+                            GENERATE_DATE_ARRAY(
+                                DATE_ADD(CURRENT_DATE(), INTERVAL -90 DAY),
+                                CURRENT_DATE(),
+                                INTERVAL 1 DAY
+                            )
+                        ) AS RawDate
+                    ) _cal
+                    LEFT JOIN (
+                        SELECT * FROM
+                        {dataset}.AccountNonClickStats_{table_suffix}
+                        WHERE ExternalCustomerId = {external_customer_id}
+                    ) b
+                    ON _cal.RawDate = b._DATA_DATE
+                )
                 WHERE ExternalCustomerId = {external_customer_id}
                 GROUP BY 1, 2, 3
             ),
@@ -475,11 +494,28 @@ def metric_topsis() -> Getter:
         lambda dataset, table_suffix, external_customer_id: f"""
             WITH base AS (
                 SELECT
-                    _DATA_DATE AS Date,
+                    RawDate AS Date,
                     Month,
-                    EXTRACT(DAY FROM _DATA_DATE) AS Day, 
+                    EXTRACT(DAY FROM RawDate) AS Day, 
                     AVG(SAFE_CAST(REPLACE(SearchTopImpressionShare, '%', '') AS NUMERIC)) AS d0,
-                FROM {dataset}.CampaignCrossDeviceStats_{table_suffix}
+                FROM (
+                    SELECT * FROM (
+                        SELECT * FROM
+                        UNNEST(
+                            GENERATE_DATE_ARRAY(
+                                DATE_ADD(CURRENT_DATE(), INTERVAL -90 DAY),
+                                CURRENT_DATE(),
+                                INTERVAL 1 DAY
+                            )
+                        ) AS RawDate
+                    ) _cal
+                    LEFT JOIN (
+                        SELECT * FROM
+                        {dataset}.CampaignCrossDeviceStats_{table_suffix}
+                        WHERE ExternalCustomerId = {external_customer_id}
+                    ) b
+                    ON _cal.RawDate = b._DATA_DATE
+                )
                 WHERE ExternalCustomerId = {external_customer_id}
                 GROUP BY 1, 2, 3
             ),
@@ -532,18 +568,35 @@ def ad_group_cpa() -> Getter:
                     c.CampaignName,
                     SUM(ags.Cost / 1e6) AS Cost,
                     SUM(ags.Conversions) AS Conversions,
-                FROM {dataset}.AdGroupStats_{table_suffix} ags
+                FROM (
+                    SELECT * FROM (
+                        SELECT * FROM
+                        UNNEST(
+                            GENERATE_DATE_ARRAY(
+                                DATE_ADD(CURRENT_DATE(), INTERVAL -90 DAY),
+                                CURRENT_DATE(),
+                                INTERVAL 1 DAY
+                            )
+                        ) AS RawDate
+                    ) _cal
+                    LEFT JOIN (
+                        SELECT * FROM
+                        {dataset}.AdGroupStats_{table_suffix} ags
+                        WHERE ExternalCustomerId = {external_customer_id}
+                    ) b
+                    ON _cal.RawDate = b._DATA_DATE
+                ) ags
                 INNER JOIN {dataset}.AdGroup_{table_suffix} ag
                     ON ags.AdGroupId = ag.AdGroupId
                     AND ags.CampaignId = ag.CampaignId
-                    AND ag._DATA_DATE = ag._LATEST_DATE
                 INNER JOIN {dataset}.Campaign_{table_suffix} c
                     ON ags.CampaignId = c.CampaignId
-                    AND c._DATA_DATE = c.LATEST_DATE
                 WHERE
-                    ags._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)
-                    AND ags._DATE_DATE <> CURRENT_DATE()
+                    ags.RawDate >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)
+                    AND ags.RawDate <> CURRENT_DATE()
                     AND ags.ExternalCustomerId = {external_customer_id}
+                    AND ag._DATA_DATE = ag._LATEST_DATE
+                    AND c._DATA_DATE = c._LATEST_DATE
                 GROUP BY 1, 2
             ),
             base2 AS (
@@ -575,23 +628,40 @@ def keyword_cpa() -> Getter:
                     c.CampaignName,
                     SUM(kws.Cost / 1e6) AS Cost,
                     SUM(kws.Conversions) AS Conversions,
-                FROM {dataset}.KeywordStats_{table_suffix} kws
+                FROM (
+                    SELECT * FROM (
+                        SELECT * FROM
+                        UNNEST(
+                            GENERATE_DATE_ARRAY(
+                                DATE_ADD(CURRENT_DATE(), INTERVAL -90 DAY),
+                                CURRENT_DATE(),
+                                INTERVAL 1 DAY
+                            )
+                        ) AS RawDate
+                    ) _cal
+                    LEFT JOIN (
+                        SELECT * FROM
+                        {dataset}.KeywordStats_{table_suffix} kws
+                        WHERE ExternalCustomerId = {external_customer_id}
+                    ) b
+                    ON _cal.RawDate = b._DATA_DATE
+                ) kws
                 INNER JOIN {dataset}.Keyword_{table_suffix} kw
                     ON kws.CriterionId = kw.CriterionId
                     AND kws.AdGroupId = kw.AdGroupId
                     AND kws.CampaignId = kw.CampaignId
-                    AND kw._DATA_DATE = kw._LATEST_DATE
                 INNER JOIN {dataset}.AdGroup_{table_suffix} ag
                     ON kws.AdGroupId = ag.AdGroupId
                     AND kws.CampaignId = ag.CampaignId
-                    AND ag._DATA_DATE = ag._LATEST_DATE
                 INNER JOIN {dataset}.Campaign_{table_suffix} c
                     ON kws.CampaignId = c.CampaignId
-                    AND c._DATA_DATE = c._LATEST_DATE
                 WHERE
-                    kws._DATA_DATE >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)
-                    AND kws._DATE_DATE <> CURRENT_DATE()
+                    kws.RawDate >= DATE_ADD(CURRENT_DATE(), INTERVAL -7 DAY)
+                    AND kws.RawDate <> CURRENT_DATE()
                     AND kws.ExternalCustomerId = {external_customer_id}
+                    AND kw._DATA_DATE = kw._LATEST_DATE
+                    AND ag._DATA_DATE = ag._LATEST_DATE
+                    AND c._DATA_DATE = c._LATEST_DATE
                 GROUP BY 1, 2, 3
             ),
             base2 AS (
@@ -623,15 +693,34 @@ def metric_performance(field: str) -> Getter:
                     CampaignName,
                     AdGroupName,
                     AVG(Conversions) AS value
-                FROM {dataset}.AdGroupStats_{table_suffix} ags
+                FROM (
+                    SELECT * FROM (
+                        SELECT * FROM
+                        UNNEST(
+                            GENERATE_DATE_ARRAY(
+                                DATE_ADD(CURRENT_DATE(), INTERVAL -90 DAY),
+                                CURRENT_DATE(),
+                                INTERVAL 1 DAY
+                            )
+                        ) AS RawDate
+                    ) _cal
+                    LEFT JOIN (
+                        SELECT * FROM
+                        {dataset}.AdGroupStats_{table_suffix} kws
+                        WHERE ExternalCustomerId = {external_customer_id}
+                    ) b
+                    ON _cal.RawDate = b._DATA_DATE
+                ) ags
                 INNER JOIN {dataset}.AdGroup_{table_suffix} ag
                     ON ags.CampaignId = ag.CampaignId
                     AND ags.AdGroupId = ag.AdGroupId
-                    AND ag._DATA_DATE = ag._LATEST_DATE
                 INNER JOIN {dataset}.Campaign_{table_suffix} c
                     ON ags.CampaignId = c.CampaignId
+                WHERE
+                    ags.ExternalCustomerId = {external_customer_id}
+                    AND ag._DATA_DATE = ag._LATEST_DATE
                     AND c._DATA_DATE = c._LATEST_DATE
-                WHERE ags.ExternalCustomerId = {external_customer_id}
+
                 GROUP BY 1, 2, 3
             ),
             base2 AS (
