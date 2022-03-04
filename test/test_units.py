@@ -22,32 +22,41 @@ def run(data: dict) -> dict:
 class TestReport:
     @pytest.fixture(
         params=[
-            i
-            for j in [
-                get_customers(i["dataset"], i["table_suffix"])
+            {"dataset": mcc[0], "table_suffix": mcc[1], **account}
+            for mcc in [
+                (
+                    i["dataset"],
+                    i["table_suffix"],
+                    get_customers(i["dataset"], i["table_suffix"]),
+                )
                 for i in tasks_service.MCC
             ]
-            for i in j
+            for account in mcc[2]
         ],
         ids=[
-            i["AccountDescriptiveName"]
-            for j in [
-                get_customers(i["dataset"], i["table_suffix"])
+            f"{mcc[0]}-{account['account_name']}"
+            for mcc in [
+                (
+                    i["dataset"],
+                    i["table_suffix"],
+                    get_customers(i["dataset"], i["table_suffix"]),
+                )
                 for i in tasks_service.MCC
             ]
-            for i in j
+            for account in mcc[2]
         ],
     )
     def body(self, request):
         return request.param
 
-    def test_controller(self, body, report):
-        res = run({**body, "report": report})
-        assert res["emails_sent"] >= 0
-
     def test_service(self, body, report):
         res = report_service.report_service({**body, "report": report})
         res
+
+    def test_controller(self, body, report):
+        res = run({**body, "report": report})
+        assert res["email_sent"] >= 0
+
 
 
 class TestTasks:

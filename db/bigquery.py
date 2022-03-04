@@ -25,8 +25,8 @@ def get_customers(dataset: str, table_suffix: str) -> list[dict[str, str]]:
     rows = [dict(row.items()) for row in results]
     return [
         {
-            "ExternalCustomerId": str(i["ExternalCustomerId"]),
-            "AccountDescriptiveName": i["AccountDescriptiveName"],
+            "external_customer_id": str(i["ExternalCustomerId"]),
+            "account_name": i["AccountDescriptiveName"],
         }
         for i in rows
         if str(i["ExternalCustomerId"]) not in EXCLUDED
