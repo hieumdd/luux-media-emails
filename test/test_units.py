@@ -5,7 +5,7 @@ import pytest
 from main import main
 from report import report_repo, report_service
 from tasks import tasks_service
-from db.bigquery import get_customers
+from db.bigquery import get_accounts
 
 
 @pytest.fixture(
@@ -20,31 +20,27 @@ def run(data: dict) -> dict:
 
 
 class TestReport:
+    accounts = [
+        {"dataset": mcc[0], "table_suffix": mcc[1], **account}
+        for mcc in [
+            (
+                i["dataset"],
+                i["table_suffix"],
+                get_accounts(
+                    {
+                        "dataset": i["dataset"],
+                        "table_suffix": i["table_suffix"],
+                    }
+                ),
+            )
+            for i in tasks_service.MCC
+        ]
+        for account in mcc[2]
+    ]
+
     @pytest.fixture(
-        params=[
-            {"dataset": mcc[0], "table_suffix": mcc[1], **account}
-            for mcc in [
-                (
-                    i["dataset"],
-                    i["table_suffix"],
-                    get_customers(i["dataset"], i["table_suffix"]),
-                )
-                for i in tasks_service.MCC
-            ]
-            for account in mcc[2]
-        ],
-        ids=[
-            f"{mcc[0]}-{account['account_name']}"
-            for mcc in [
-                (
-                    i["dataset"],
-                    i["table_suffix"],
-                    get_customers(i["dataset"], i["table_suffix"]),
-                )
-                for i in tasks_service.MCC
-            ]
-            for account in mcc[2]
-        ],
+        params=accounts,
+        ids=[f"{i['dataset']}-{i['account_name']}" for i in accounts],
     )
     def body(self, request):
         return request.param
@@ -58,17 +54,26 @@ class TestReport:
         assert res["email_sent"] >= 0
 
 
-
 class TestTasks:
-    @pytest.mark.parametrize(
-        "mcc",
-        tasks_service.MCC,
+    @pytest.fixture(
+        params=tasks_service.MCC,
         ids=[i["dataset"] for i in tasks_service.MCC],
     )
+    def mcc(self, request):
+        return request.param
+
     def test_create_account_tasks_service(self, mcc, report):
         res = tasks_service.create_account_tasks({**mcc, "report": report})
         res
 
-    def test_tasks(report):
-        res = tasks_service.create_mcc_tasks({"report": report})
+    def test_create_account_tasks_controller(self, mcc, report):
+        res = run({**mcc, "report": report, "tasks": "account"})
+        res
+
+    def test_create_mcc_tasks_service(self, report):
+        res = tasks_service.create_mcc_tasks({"report": report, "tasks": "mcc"})
+        res
+
+    def test_create_mcc_tasks_controller(self, report):
+        res = run({"report": report, "tasks": "mcc"})
         res

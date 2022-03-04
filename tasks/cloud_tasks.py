@@ -16,7 +16,7 @@ def create_tasks(name_fn: Callable[[dict[str, Any]], str]):
         tasks = [
             {
                 "parent": TASKS_CLIENT.queue_path(*CLOUD_TASKS_PATH),
-                "tasks": {
+                "task": {
                     "name": TASKS_CLIENT.task_path(
                         *CLOUD_TASKS_PATH,
                         task=f"{name_fn(payload)}-{uuid.uuid4()}",

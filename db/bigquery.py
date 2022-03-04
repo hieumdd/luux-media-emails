@@ -1,6 +1,7 @@
 from google.cloud import bigquery
 
 from report.metrics.base import IMetric
+from report import report
 
 BQ_CLIENT = bigquery.Client()
 
@@ -13,7 +14,9 @@ EXCLUDED = [
 ]
 
 
-def get_customers(dataset: str, table_suffix: str) -> list[dict[str, str]]:
+def get_accounts(mcc: report.MCC) -> list[dict[str, str]]:
+    dataset = mcc["dataset"]
+    table_suffix = mcc["table_suffix"]
     results = BQ_CLIENT.query(
         f"""SELECT
             ExternalCustomerId,

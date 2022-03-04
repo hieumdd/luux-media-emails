@@ -6,8 +6,8 @@ from mail import mail_service
 
 SENDER = "siddhantmehandru.developer@gmail.com"
 RECEIVERS = [
-    # "hieumdd@gmail.com",
-    "analytics@luux-media.com",
+    "hieumdd@gmail.com",
+    # "analytics@luux-media.com",
 ]
 
 
