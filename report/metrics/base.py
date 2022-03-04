@@ -1,6 +1,6 @@
 from typing import Callable, TypedDict
 
-from models.getter import Getter
+from report.metrics.getter import Getter
 
 
 class IMetric(TypedDict):

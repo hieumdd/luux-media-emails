@@ -1,6 +1,6 @@
 from google.cloud import bigquery
 
-from models.metrics.base import IMetric
+from report.metrics.base import IMetric
 
 BQ_CLIENT = bigquery.Client()
 

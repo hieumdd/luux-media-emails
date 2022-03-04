@@ -1,7 +1,29 @@
 from typing import TypedDict
 
-from models.metrics.base import IMetric
-from models.metrics import daily, weekly
+from report.metrics.base import IMetric
+from report.metrics import daily, weekly
+
+
+class MCC(TypedDict):
+    dataset: str
+    table_suffix: str
+
+
+class Request(TypedDict):
+    report: str
+
+
+class Account(MCC):
+    external_customer_id: str
+    account_name: str
+
+
+class AccountRequest(Account, Request):
+    pass
+
+
+class MCCRequest(MCC, Request):
+    pass
 
 
 class IReport(TypedDict):

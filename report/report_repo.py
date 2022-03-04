@@ -3,16 +3,14 @@ import time
 
 from google.cloud import bigquery
 
-from libs.bigquery import get_metric
-from models.metrics.base import compose
-from models.reports import IReport, report_daily, report_weekly
+from db.bigquery import get_metric
+from report.metrics.base import compose
+from report.report import report_daily, report_weekly
 
-
-def report_factory(mode: str = "daily") -> IReport:
-    if mode == "daily":
-        return report_daily
-    else:
-        return report_weekly
+reports = {
+    "daily": report_daily,
+    "weekly": report_weekly,
+}
 
 
 def poll(jobs: bigquery.LoadJob) -> None:
@@ -22,18 +20,19 @@ def poll(jobs: bigquery.LoadJob) -> None:
         return poll(jobs)
 
 
-def build_report(
+def build(
     dataset: str,
     table_suffix: str,
     external_customer_id: str,
     account_name: str,
-    report: IReport,
+    report: str,
 ) -> tuple[str, Optional[str]]:
+    _report = reports[report]
     subject = f"Potential Issues With {account_name} on Google"
-    prelude = f"<p>Please see the below potential issues when carrying out {report['mode'].lower()} checks for {account_name} - {external_customer_id}</p>"
+    prelude = f"<p>Please see the below potential issues when carrying out {_report['mode'].lower()} checks for {account_name} - {external_customer_id}</p>"
     jobs = [
         get_metric(dataset, table_suffix, external_customer_id, i)
-        for i in report["metrics"]
+        for i in _report["metrics"]
     ]
     poll(jobs)
     jobs_results = [i.result() for i in jobs]
@@ -44,7 +43,7 @@ def build_report(
     body = "".join(
         [
             compose(metric, result)
-            for metric, result in zip(report["metrics"], jobs_results)
+            for metric, result in zip(_report["metrics"], jobs_results)
             if result
         ]
     )
