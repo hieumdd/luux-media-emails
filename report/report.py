@@ -9,6 +9,7 @@ class _MCC(TypedDict):
     name: str
     dataset: str
     table_suffix: str
+    receivers: list[str]
 
 
 class Account(_MCC):
@@ -72,11 +73,15 @@ report_weekly: IReport = {
 
 luux_media_accounts = get_accounts("GoogleAds", "3413321199")
 
-luux_media = {
+luux_media: MCC = {
     "name": "LuuxMedia",
     "dataset": "GoogleAds",
     "table_suffix": "3413321199",
     "accounts": luux_media_accounts,  # type: ignore
+    "receives": [
+        "hieumdd@gmail.com",
+        # "analytics@luux-media.com",
+    ],
 }
 
 multi_layer: MCC = {
@@ -87,6 +92,10 @@ multi_layer: MCC = {
         i  # type: ignore
         for i in get_accounts("GoogleAdsMultiLayer", "8228156051")
         if i not in luux_media_accounts
+    ],
+    "receviers": [
+        "hieumdd@gmail.com",
+        # "analytics@luux-media.com",
     ],
 }
 
