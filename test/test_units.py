@@ -3,15 +3,14 @@ from unittest.mock import Mock
 import pytest
 
 from main import main
-from report import report_repo, report_service
+from report import report, report_repo, report_service
 from tasks import tasks_service
-from db.bigquery import get_accounts
 
 
 @pytest.fixture(
     params=report_repo.reports.keys(),
 )
-def report(request):
+def report_(request):
     return request.param
 
 
@@ -20,60 +19,58 @@ def run(data: dict) -> dict:
 
 
 class TestReport:
-    accounts = [
-        {"dataset": mcc[0], "table_suffix": mcc[1], **account}
-        for mcc in [
-            (
-                i["dataset"],
-                i["table_suffix"],
-                get_accounts(
-                    {
-                        "dataset": i["dataset"],
-                        "table_suffix": i["table_suffix"],
-                    }
-                ),
-            )
-            for i in tasks_service.MCC
-        ]
-        for account in mcc[2]
-    ]
+    # accounts = [
+    #     {
+    #         "dataset": mcc["dataset"],
+    #         "table_suffix": mcc["table_suffix"],
+    #         **account,
+    #     }
+    #     for mcc in report.mccs
+    #     for account in mcc["accounts"]  # type: ignore
+    # ]
 
-    @pytest.fixture(
-        params=accounts,
-        ids=[f"{i['dataset']}-{i['account_name']}" for i in accounts],
-    )
-    def body(self, request):
-        return request.param
+    # @pytest.fixture(
+    #     params=accounts,
+    #     ids=[f"{i['dataset']}-{i['account_name']}" for i in accounts],
+    # )
+    # def body(self, request):
+    #     return request.param
 
-    def test_service(self, body, report):
-        res = report_service.report_service({**body, "report": report})
-        res
+    # def test_service(self, body, report_):
+    #     res = report_service.report_service({**body, "report": report_})
+    #     res
 
-    def test_controller(self, body, report):
-        res = run({**body, "report": report})
-        assert res["email_sent"] >= 0
+    # def test_controller(self, body, report_):
+    #     res = run({**body, "report": report_})
+    #     assert res["email_sent"] >= 0
+    pass
 
 
 class TestTasks:
     @pytest.fixture(
-        params=tasks_service.MCC,
-        ids=[i["dataset"] for i in tasks_service.MCC],
+        params=report.mccs,
+        ids=[i["dataset"] for i in report.mccs],  # type: ignore
     )
     def mcc(self, request):
         return request.param
 
-    def test_create_account_tasks_service(self, mcc, report):
-        res = tasks_service.create_account_tasks({**mcc, "report": report})
+    def test_create_account_tasks_service(self, mcc, report_):
+        res = tasks_service.create_account_tasks(
+            {
+                **mcc,
+                "report_": report_,
+            }
+        )
         res
 
-    def test_create_account_tasks_controller(self, mcc, report):
-        res = run({**mcc, "report": report, "tasks": "account"})
+    def test_create_account_tasks_controller(self, mcc, report_):
+        res = run({**mcc, "report": report_, "tasks": "account"})
         res
 
-    def test_create_mcc_tasks_service(self, report):
-        res = tasks_service.create_mcc_tasks({"report": report, "tasks": "mcc"})
+    def test_create_mcc_tasks_service(self, report_):
+        res = tasks_service.create_mcc_tasks({"report": report_, "tasks": "mcc"})
         res
 
-    def test_create_mcc_tasks_controller(self, report):
-        res = run({"report": report, "tasks": "mcc"})
+    def test_create_mcc_tasks_controller(self, report_):
+        res = run({"report": report_, "tasks": "mcc"})
         res
