@@ -78,7 +78,7 @@ luux_media: MCC = {
     "dataset": "GoogleAds",
     "table_suffix": "3413321199",
     "accounts": luux_media_accounts,  # type: ignore
-    "receives": [
+    "receivers": [
         "hieumdd@gmail.com",
         # "analytics@luux-media.com",
     ],
@@ -93,13 +93,13 @@ multi_layer: MCC = {
         for i in get_accounts("GoogleAdsMultiLayer", "8228156051")
         if i not in luux_media_accounts
     ],
-    "receviers": [
+    "receivers": [
         "hieumdd@gmail.com",
-        # "analytics@luux-media.com",
+        # "aaron@multi-layer-media.co.uk",
     ],
 }
 
 mccs = [
     luux_media,
-    multi_layer,
+    # multi_layer,
 ]

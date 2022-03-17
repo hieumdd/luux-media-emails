@@ -23,18 +23,21 @@ def compose(
 def send(sender: str, receivers: list[str]):
     def _send(message: tuple[str, str]) -> list[str]:
         subject, report = message
-        with smtplib.SMTP_SSL(
-            "smtp.gmail.com",
-            465,
-            context=ssl.create_default_context(),
-        ) as server:
-            server.login(sender, os.getenv("SENDER_PWD", ""))
-            for receiver in receivers:
-                server.sendmail(
-                    sender,
-                    receiver,
-                    compose(sender, receiver, subject, report).as_string(),
-                )
-        return receivers
+        if report:
+            with smtplib.SMTP_SSL(
+                "smtp.gmail.com",
+                465,
+                context=ssl.create_default_context(),
+            ) as server:
+                server.login(sender, os.getenv("SENDER_PWD", ""))
+                for receiver in receivers:
+                    server.sendmail(
+                        sender,
+                        receiver,
+                        compose(sender, receiver, subject, report).as_string(),
+                    )
+            return receivers
+        else:
+            return []
 
     return _send

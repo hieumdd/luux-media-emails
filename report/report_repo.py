@@ -9,7 +9,7 @@ from report.report import report_daily, report_weekly
 
 reports = {
     "daily": report_daily,
-    "weekly": report_weekly,
+    # "weekly": report_weekly,
 }
 
 
@@ -26,6 +26,7 @@ def build(
     external_customer_id: str,
     account_name: str,
     report: str,
+    **kwargs,
 ) -> tuple[str, Optional[str]]:
     _report = reports[report]
     subject = f"Potential Issues With {account_name} on Google"

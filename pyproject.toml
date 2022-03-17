@@ -15,13 +15,14 @@ black = "^21.9b0"
 pytest = "^6.2.5"
 pytest-timeout = "^2.0.1"
 mypy = "^0.910"
+pytest-xdist = "^2.5.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
-addopts = "-s --durations=0"
+addopts = "-s --durations=0 -n12"
 testpaths = [
     "test",
 ]
