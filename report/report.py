@@ -79,8 +79,8 @@ luux_media: MCC = {
     "table_suffix": "3413321199",
     "accounts": luux_media_accounts,  # type: ignore
     "receivers": [
-        "hieumdd@gmail.com",
-        # "analytics@luux-media.com",
+        # "hieumdd@gmail.com",
+        "analytics@luux-media.com",
     ],
 }
 
@@ -94,12 +94,12 @@ multi_layer: MCC = {
         if i not in luux_media_accounts
     ],
     "receivers": [
-        "hieumdd@gmail.com",
-        # "aaron@multi-layer-media.co.uk",
+        # "hieumdd@gmail.com",
+        "aaron@multi-layer-media.co.uk",
     ],
 }
 
 mccs = [
     luux_media,
-    # multi_layer,
+    multi_layer,
 ]

@@ -43,7 +43,7 @@ class TestReport:
 
     def test_controller(self, body, report_):
         res = run({**body, "report": report_})
-        assert res["email_sent"] >= 0
+        assert len(res["email_sent"]) >= 0
 
 
 class TestTasks:

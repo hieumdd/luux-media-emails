@@ -9,7 +9,7 @@ from report.report import report_daily, report_weekly
 
 reports = {
     "daily": report_daily,
-    # "weekly": report_weekly,
+    "weekly": report_weekly,
 }
 
 

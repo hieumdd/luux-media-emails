@@ -23,6 +23,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 addopts = "-s --durations=0 -n12"
+# addopts = "-s --durations=0"
 testpaths = [
     "test",
 ]
