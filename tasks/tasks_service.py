@@ -1,6 +1,7 @@
 from report import report
 from tasks import cloud_tasks
 
+
 def create_tasks_service(body: report.Request) -> int:
     return cloud_tasks.create_tasks(lambda x: f"{x['report']-x['account_name']}")(
         [
