@@ -1,6 +1,6 @@
 from google.cloud import bigquery
 
-from models.metrics.base import IMetric
+from report.metrics.base import IMetric
 
 BQ_CLIENT = bigquery.Client()
 
@@ -13,7 +13,7 @@ EXCLUDED = [
 ]
 
 
-def get_customers(dataset: str, table_suffix: str) -> list[dict[str, str]]:
+def get_accounts(dataset: str, table_suffix: str) -> list[dict[str, str]]:
     results = BQ_CLIENT.query(
         f"""SELECT
             ExternalCustomerId,
@@ -25,8 +25,8 @@ def get_customers(dataset: str, table_suffix: str) -> list[dict[str, str]]:
     rows = [dict(row.items()) for row in results]
     return [
         {
-            "ExternalCustomerId": str(i["ExternalCustomerId"]),
-            "AccountDescriptiveName": i["AccountDescriptiveName"],
+            "external_customer_id": str(i["ExternalCustomerId"]),
+            "account_name": i["AccountDescriptiveName"],
         }
         for i in rows
         if str(i["ExternalCustomerId"]) not in EXCLUDED
