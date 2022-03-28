@@ -8,7 +8,6 @@ def main(request) -> dict:
 
     if "tasks" in data:
         response = tasks_controller(data)
-
     elif "external_customer_id" in data and "report" in data:
         response = report_controller(data)
     else:

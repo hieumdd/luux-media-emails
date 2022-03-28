@@ -47,30 +47,10 @@ class TestReport:
 
 
 class TestTasks:
-    @pytest.fixture(
-        params=report.mccs,
-        ids=[i["dataset"] for i in report.mccs],  # type: ignore
-    )
-    def mcc(self, request):
-        return request.param
-
-    def test_create_account_tasks_service(self, mcc, report_):
-        res = tasks_service.create_account_tasks(
-            {
-                **mcc,
-                "report_": report_,
-            }
-        )
+    def test_service(self, report_):
+        res = tasks_service.create_tasks_service({"report": report_, "tasks": "mcc"})
         res
 
-    def test_create_account_tasks_controller(self, mcc, report_):
-        res = run({**mcc, "report": report_, "tasks": "account"})
-        res
-
-    def test_create_mcc_tasks_service(self, report_):
-        res = tasks_service.create_mcc_tasks({"report": report_, "tasks": "mcc"})
-        res
-
-    def test_create_mcc_tasks_controller(self, report_):
+    def test_controller(self, report_):
         res = run({"report": report_, "tasks": "mcc"})
         res

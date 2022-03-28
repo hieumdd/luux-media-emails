@@ -38,6 +38,7 @@ def send(sender: str, receivers: list[str]):
                     )
             return receivers
         else:
+            print('Empty Report')
             return []
 
     return _send
