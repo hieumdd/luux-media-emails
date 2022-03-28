@@ -2,28 +2,18 @@ from report import report
 from tasks import cloud_tasks
 
 
-def create_account_tasks(body: report.MCCRequest) -> int:
-    return cloud_tasks.create_tasks(lambda x: f"{x['dataset']}-{x['report']}")(
+def create_tasks_service(body: report.Request) -> int:
+    return cloud_tasks.create_tasks(lambda x: f"{x['report']-x['account_name']}")(
         [
             {
-                **y,  # type: ignore
                 "report": body["report"],
-                "dataset": body["dataset"],
-                "table_suffix": body["table_suffix"],
+                "dataset": mcc["dataset"],
+                "table_suffix": mcc["table_suffix"],
+                "receivers": mcc["receivers"],
+                "external_customer_id": account["external_customer_id"],
+                "account_name": account["account_name"],
             }
-            for y in body["accounts"]
-        ]
-    )
-
-
-def create_mcc_tasks(body: report.Request) -> int:
-    return cloud_tasks.create_tasks(lambda x: f"{x['report']}")(
-        [
-            {
-                **i,  # type: ignore
-                "report": body["report"],
-                "tasks": "account",
-            }
-            for i in report.mccs
+            for mcc in report.mccs
+            for account in mcc["accounts"]
         ]
     )

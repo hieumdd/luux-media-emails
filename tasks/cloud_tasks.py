@@ -34,6 +34,7 @@ def create_tasks(name_fn: Callable[[dict[str, Any]], str]):
             }
             for payload in payloads
         ]
+        tasks
         return len([TASKS_CLIENT.create_task(task) for task in tasks])
 
     return _create
