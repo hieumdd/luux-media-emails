@@ -4,14 +4,6 @@ from report.metrics.base import IMetric
 
 BQ_CLIENT = bigquery.Client()
 
-EXCLUDED = [
-    "4068193193",
-    "2699221811",
-    "7235067194",
-    "6177687558",
-    "4664538796",
-]
-
 
 def get_accounts(dataset: str, table_suffix: str) -> list[dict[str, str]]:
     results = BQ_CLIENT.query(
@@ -29,7 +21,6 @@ def get_accounts(dataset: str, table_suffix: str) -> list[dict[str, str]]:
             "account_name": i["AccountDescriptiveName"],
         }
         for i in rows
-        if str(i["ExternalCustomerId"]) not in EXCLUDED
     ]
 
 
