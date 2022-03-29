@@ -73,7 +73,7 @@ multi_layer = MCC(
     table_suffix="8228156051",
     receivers=[
         # "hieumdd@gmail.com",
-        "aaron@multi-layer-media.co.uk",
+        "analytics@multi-layer-media.co.uk",
     ],
     accounts=[i for i in multi_layer_accounts if i not in luux_media_accounts],
 )
