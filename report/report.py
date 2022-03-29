@@ -1,36 +1,18 @@
 from typing import TypedDict
+from dataclasses import dataclass
 
 from db.bigquery import get_accounts
 from report.metrics.base import IMetric
 from report.metrics import daily, weekly
 
 
-class _MCC(TypedDict):
+@dataclass
+class MCC:
     name: str
     dataset: str
     table_suffix: str
     receivers: list[str]
-
-
-class Account(_MCC):
-    external_customer_id: str
-    account_name: str
-
-
-class MCC(_MCC):
-    accounts: list[Account]
-
-
-class Request(TypedDict):
-    report: str
-
-
-class AccountRequest(Account, Request):
-    pass
-
-
-class MCCRequest(MCC, Request):
-    pass
+    accounts: list[dict[str, str]]
 
 
 class IReport(TypedDict):
@@ -72,32 +54,29 @@ report_weekly: IReport = {
 }
 
 luux_media_accounts = get_accounts("GoogleAds", "3413321199")
+multi_layer_accounts = get_accounts("GoogleAdsMultiLayer", "8228156051")
 
-luux_media: MCC = {
-    "name": "LuuxMedia",
-    "dataset": "GoogleAds",
-    "table_suffix": "3413321199",
-    "accounts": luux_media_accounts,  # type: ignore
-    "receivers": [
+luux_media = MCC(
+    name="LuuxMedia",
+    dataset="GoogleAds",
+    table_suffix="3413321199",
+    receivers=[
         # "hieumdd@gmail.com",
         "analytics@luux-media.com",
     ],
-}
+    accounts=luux_media_accounts,
+)
 
-multi_layer: MCC = {
-    "name": "MultiLayer",
-    "dataset": "GoogleAdsMultiLayer",
-    "table_suffix": "8228156051",
-    "accounts": [
-        i  # type: ignore
-        for i in get_accounts("GoogleAdsMultiLayer", "8228156051")
-        if i not in luux_media_accounts
-    ],
-    "receivers": [
+multi_layer = MCC(
+    name="MultiLayer",
+    dataset="GoogleAdsMultiLayer",
+    table_suffix="8228156051",
+    receivers=[
         # "hieumdd@gmail.com",
         "aaron@multi-layer-media.co.uk",
     ],
-}
+    accounts=[i for i in multi_layer_accounts if i not in luux_media_accounts],
+)
 
 mccs = [
     luux_media,
