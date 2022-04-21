@@ -417,6 +417,6 @@ multi_layer = MCC(
 )
 
 mccs = [
-    # luux_media,
+    luux_media,
     multi_layer,
 ]
